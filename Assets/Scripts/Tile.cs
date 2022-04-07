@@ -4,48 +4,65 @@ public class Tile : MonoBehaviour
 {
     [SerializeField] private SpriteRenderer _renderer;
     [SerializeField] private GameObject _piecePrefab;
-    [SerializeField] private GameObject _highlight;
+    [SerializeField] private GameObject _hoverHighlight;
+    [SerializeField] private GameObject _legalHighlight;
 
     private bool _isHomeCell;
     private Color _color;
-    private Vector2 _pos;
-    private GameObject _piece = null;
-    private bool _isShowingLegalMoves;
+    private bool _targetable;
 
-    void OnMouseEnter()
+    public GameObject piece = null;
+    public Vector2 pos;
+
+    private void OnMouseEnter()
     {
-        _highlight.SetActive(true);
+        _hoverHighlight.SetActive(true);
     }
 
-    void OnMouseExit()
+    private void OnMouseExit()
     {
-        _highlight.SetActive(false);
+        _hoverHighlight.SetActive(false);
     }
 
-    void OnMouseDown()
+    private void OnMouseDown()
     {
-        Debug.Log("OnMouseDown");
-
-        // trigger event "ShowLegalMoves" with data targetTilePos
+        EventManager.TriggerTypedEvent("OnTileClicked", new CustomEventData(this));
     }
 
-    public void Initialize(Vector2 pos, Color color)
+    public void Initialize(Vector2 initPos, Color color)
     {
-        _pos = pos;
+        pos = initPos;
         _color = color;
         _renderer.color = _color;
 
         _isHomeCell = (0 == pos.y) || (7 == pos.y);
         if (_isHomeCell)
-            GeneratePiece();
+            GeneratePieceOnTop(_color);
     }
 
-    public void GeneratePiece()
+    public void GeneratePieceOnTop(Color pieceColor)
     {
-        GameObject newPiece = Instantiate(_piecePrefab, new Vector3(_pos.x, _pos.y), Quaternion.identity);
-        newPiece.transform.Find("InnerCircle").GetComponent<SpriteRenderer>().color = _color;
-        _piece = newPiece;
+        GameObject newPiece = Instantiate(_piecePrefab, new Vector3(pos.x, pos.y), Quaternion.identity);
+        newPiece.transform.Find("InnerCircle").GetComponent<SpriteRenderer>().color = pieceColor;
+        piece = newPiece;
+    }
+    public void MovePiece(Tile targetTile)
+    {
+        Color pieceColor = piece.transform.Find("InnerCircle").GetComponent<SpriteRenderer>().color;
+        targetTile.GeneratePieceOnTop(pieceColor);
+        Destroy(piece);
+        piece = null;
     }
 
     public bool IsHomeCell { get => _isHomeCell; }
+    public bool IsOccupied { get => null != piece; }
+    public bool Targetable
+    {
+        get =>_targetable;
+        set
+        {
+             _legalHighlight.SetActive(value);
+            _targetable = value; 
+        }
+    }
 }
