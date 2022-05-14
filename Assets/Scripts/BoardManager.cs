@@ -1,15 +1,12 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Networking.Transport;
 
 public class BoardManager : MonoBehaviour
 {    
-    private const int TILE_COUNT_X = 8;
-    private const int TILE_COUNT_Y = 8;
-    [SerializeField] private int _width, _height;
     [SerializeField] private Tile _blankTilePrefab;
     [SerializeField] private Transform _cam;
-
 
     [Header("Color Theme")]
     [SerializeField] private Color _orange;
@@ -21,14 +18,26 @@ public class BoardManager : MonoBehaviour
     [SerializeField] private Color _green;
     [SerializeField] private Color _brown;
 
+    private const int TILE_COUNT_X = 8;
+    private const int TILE_COUNT_Y = 8;
     private Dictionary<Vector2, Tile> _tiles;
     private Tile _selectedTileWithPiece;
 
-    void Start()
+    #region Networking
+    private int _playerCount = -1;
+    private int _currentTeam = -1;
+    #endregion
+
+    private void Awake()
     {
         _cam.transform.position = new Vector3(4f - 0.5f, 4f - 0.5f, -13);
-        _GenerateAllTiles();
-        EventManager.TriggerEvent("GenerateAllPieces", _tiles);
+        // _GenerateAllTiles();
+
+        _RegisterEvents();
+    }
+    private void Start()
+    {
+        // EventManager.TriggerEvent("GenerateAllPieces", _tiles);
     }
     
     private void OnEnable()
@@ -36,7 +45,7 @@ public class BoardManager : MonoBehaviour
         EventManager.AddListener("OnTileClicked", _OnTileClicked);
     }
 
-    void _GenerateAllTiles()
+    private void _GenerateAllTiles()
     {
         _tiles = new Dictionary<Vector2, Tile>();
         for (int y = 0; y < TILE_COUNT_Y; y++)
@@ -184,4 +193,47 @@ public class BoardManager : MonoBehaviour
         foreach (var tile in _tiles.Where(kvp => kvp.Value.Targetable).ToList())
             tile.Value.Targetable = false;
     }
+
+     #region Network Events
+    private void _RegisterEvents()
+    {
+        /* Set callbacks whenever a client will receive a message */
+
+        // when Server and Client receiving a NetWelcome message
+        NetUtility.S_WELCOME += _OnWelcomeServer;
+        NetUtility.C_WELCOME += _OnWelcomeClient;
+    }
+
+    private void _UnregisterEvents()
+    {
+        NetUtility.S_WELCOME -= _OnWelcomeServer;
+        NetUtility.C_WELCOME -= _OnWelcomeClient;
+    }
+
+    // Server
+    private void _OnWelcomeServer(NetMessage msg, NetworkConnection cnn)
+    {
+        /* When any client ask the driver to connect the configured server, on succes his connection receive a 
+           NetworkEvent.Type.Connect, when he open this message he send a NetWelcome to the server. */
+        NetWelcome nw = msg as NetWelcome;
+        // NetWelcome is like : Hey I'm connected and I send you a box, can you populated it with the team ID ?
+
+        // populate the client's message with a team ID, based on the number of player
+        nw.AssignedTeam = ++_playerCount;
+        Debug.Log("Handle a NetWelcome message from a client, then send it back with AssignedTeam ID : " + nw.AssignedTeam);
+
+        // return the message back to the client
+        Server.Instance.SendToClient(cnn, nw);
+    }
+
+    // Client
+    private void _OnWelcomeClient(NetMessage msg)
+    {
+        NetWelcome nw = msg as NetWelcome;
+        // New connected client assign a team itself, from the message deserialized earlier
+        _currentTeam = nw.AssignedTeam;
+
+        Debug.Log($"Assigned team : {nw.AssignedTeam}");
+    }
+    #endregion
 }

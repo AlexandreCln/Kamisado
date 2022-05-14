@@ -1076,7 +1076,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u200B"
+  m_text: "127.0.0.1\u200B"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -1452,8 +1452,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fcbba2aba54c36643ab78743106851d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _width: 9
-  _height: 16
   _blankTilePrefab: {fileID: 8671934754693988446, guid: c84f1ab2309ac6e4c8e50749fb7f22eb, type: 3}
   _cam: {fileID: 3705283}
   _orange: {r: 0.8431373, g: 0.454902, b: 0.12941177, a: 1}
@@ -1724,7 +1722,7 @@ MonoBehaviour:
   m_CaretColor: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
   m_CustomCaretColor: 0
   m_SelectionColor: {r: 0.65882355, g: 0.80784315, b: 1, a: 0.7529412}
-  m_Text: 
+  m_Text: 127.0.0.1
   m_CaretBlinkRate: 0.85
   m_CaretWidth: 1
   m_ReadOnly: 0
@@ -2189,6 +2187,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1343145678}
   - component: {fileID: 1343145677}
+  - component: {fileID: 1343145679}
   m_Layer: 0
   m_Name: GAME
   m_TagString: Untagged
@@ -2223,6 +2222,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1343145679
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1343145676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2f6308fbc95bbb43813d457f89a9195, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1350790864
 GameObject:
   m_ObjectHideFlags: 0
@@ -2550,6 +2561,8 @@ GameObject:
   - component: {fileID: 1727668584}
   - component: {fileID: 1727668588}
   - component: {fileID: 1727668589}
+  - component: {fileID: 1727668590}
+  - component: {fileID: 1727668591}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -2671,6 +2684,33 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e735a92ca19ef00418dd4bbf99af0a9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  server: {fileID: 1727668590}
+  client: {fileID: 1727668591}
+  _addressInput: {fileID: 1106140535}
+--- !u!114 &1727668590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1727668583}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2f6308fbc95bbb43813d457f89a9195, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1727668591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1727668583}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 315e04615347e9743a315c4e782216ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &1743886147
@@ -2949,7 +2989,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1936944091}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
