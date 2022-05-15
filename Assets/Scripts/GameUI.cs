@@ -21,8 +21,7 @@ public class GameUI : MonoBehaviour
     public void OnLocalGameButton()
     {
         _menuAnimator.SetTrigger("InGameMenu");
-        server.Init(8007);
-        client.Init("127.0.0.1", 8007);
+        EventManager.TriggerEvent("StartLocalGame");
     }
 
     public void OnOnlineGameButton()

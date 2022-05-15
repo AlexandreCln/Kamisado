@@ -6,7 +6,10 @@ using Unity.Networking.Transport;
 public class BoardManager : MonoBehaviour
 {    
     [SerializeField] private Tile _blankTilePrefab;
+    [SerializeField] private Piece _blankPiecePrefab;
+
     [SerializeField] private Transform _cam;
+    [SerializeField] private float _camDistance = 13f;
 
     [Header("Color Theme")]
     [SerializeField] private Color _orange;
@@ -21,7 +24,11 @@ public class BoardManager : MonoBehaviour
     private const int TILE_COUNT_X = 8;
     private const int TILE_COUNT_Y = 8;
     private Dictionary<Vector2, Tile> _tiles;
-    private Tile _selectedTileWithPiece;
+    private Dictionary<Vector2, Piece> _blackPieces;
+    private Dictionary<Vector2, Piece> _whitePieces;
+    private Piece _activePiece;
+    private bool _isFirstTurn = true;
+    private bool _isBlackTurn = true;
 
     #region Networking
     private int _playerCount = -1;
@@ -30,22 +37,11 @@ public class BoardManager : MonoBehaviour
 
     private void Awake()
     {
-        _cam.transform.position = new Vector3(4f - 0.5f, 4f - 0.5f, -13);
-        // _GenerateAllTiles();
-
+        _cam.transform.position = new Vector3(TILE_COUNT_X/2 - 0.5f, TILE_COUNT_Y/2 - 0.5f, -_camDistance);
         _RegisterEvents();
     }
-    private void Start()
-    {
-        // EventManager.TriggerEvent("GenerateAllPieces", _tiles);
-    }
-    
-    private void OnEnable()
-    {
-        EventManager.AddListener("OnTileClicked", _OnTileClicked);
-    }
 
-    private void _GenerateAllTiles()
+    private void _SpawnAllTiles()
     {
         _tiles = new Dictionary<Vector2, Tile>();
         for (int y = 0; y < TILE_COUNT_Y; y++)
@@ -53,12 +49,12 @@ public class BoardManager : MonoBehaviour
             for (int x = 0; x < TILE_COUNT_X; x++)
             {
                 Vector2 pos = new Vector2(x, y);
-                _tiles[pos] = _GenerateTile(pos);
+                _tiles[pos] = _SpawnTile(pos);
             }   
         }
     }
 
-    private Tile _GenerateTile(Vector2 pos)
+    private Tile _SpawnTile(Vector2 pos)
     {
         Tile spawnedTile = Instantiate(_blankTilePrefab, new Vector3(pos.x, pos.y), Quaternion.identity);
         spawnedTile.name = $"Tile {pos.x} {pos.y}";
@@ -68,25 +64,36 @@ public class BoardManager : MonoBehaviour
         return spawnedTile;
     }
 
+    private void _GenerateAllPieces()
+    {       
+        _blackPieces = new Dictionary<Vector2, Piece>();
+        foreach (Tile tile in _tiles.Values.Where(t => t.IsBlackHomeCell))
+            _blackPieces[tile.Pos] = _SpawnPiece(tile);
+
+        _whitePieces = new Dictionary<Vector2, Piece>();
+        foreach (Tile tile in _tiles.Values.Where(t => t.IsWhiteHomeCell))
+            _whitePieces[tile.Pos] = _SpawnPiece(tile);
+    }
+
+    private Piece _SpawnPiece(Tile spawnTile)
+    {
+        Vector2 piecePos = new Vector2(spawnTile.Pos.x, spawnTile.Pos.y);
+        Piece spawnedPiece = Instantiate(_blankPiecePrefab, piecePos, Quaternion.identity);
+        spawnedPiece.Initialize(spawnTile);
+
+        return spawnedPiece;
+    }
+
     Color _DetermineTileColor(Vector2 pos)
     {
-        if (pos.y == pos.x)
-            return _brown;
-        if (pos.y == (1 + 3 * pos.x) % TILE_COUNT_X)
-            return _purple;
-        if (pos.y == (2 + 5 * pos.x) % TILE_COUNT_X)
-            return _blue;
-        if (pos.y == (3 + 7 * pos.x) % TILE_COUNT_X)
-            return _yellow;
-        if (pos.y == (4 + 1 * pos.x) % TILE_COUNT_X)
-            return _pink;
-        if (pos.y == (5 + 3 * pos.x) % TILE_COUNT_X)
-            return _green;
-        if (pos.y == (6 + 5 * pos.x) % TILE_COUNT_X)
-            return _red;
-        if (pos.y == (7 + 7 * pos.x) % TILE_COUNT_X)
-            return _orange;
-
+        if (pos.y == pos.x) return _brown;
+        if (pos.y == (1 + 3 * pos.x) % TILE_COUNT_X) return _purple;
+        if (pos.y == (2 + 5 * pos.x) % TILE_COUNT_X) return _blue;
+        if (pos.y == (3 + 7 * pos.x) % TILE_COUNT_X) return _yellow;
+        if (pos.y == (4 + 1 * pos.x) % TILE_COUNT_X) return _pink;
+        if (pos.y == (5 + 3 * pos.x) % TILE_COUNT_X) return _green;
+        if (pos.y == (6 + 5 * pos.x) % TILE_COUNT_X) return _red;
+        if (pos.y == (7 + 7 * pos.x) % TILE_COUNT_X) return _orange;
         return Color.white;
     }
 
@@ -100,114 +107,215 @@ public class BoardManager : MonoBehaviour
 
     private void _OnTileClicked(object data)
     {
-        Tile clickedTile = (Tile)data;
+        Tile targetTile = (Tile)data;
 
-        if (clickedTile.Piece != null)
+        if (targetTile.Targetable)
         {
-            _selectedTileWithPiece = clickedTile;
-            _ShowLegalMoves(clickedTile.Pos);
-        }
-        else
+            _isFirstTurn = false;
+            _MovePiece(targetTile);
+            _NextMove(targetTile);
+        }   
+        else if (_isFirstTurn && targetTile.Piece != null)
         {
-            if (_selectedTileWithPiece != null && clickedTile.Targetable)
-            {
-                MovePiece(_selectedTileWithPiece, clickedTile);
-            }
-
-            _selectedTileWithPiece = null;
-            _HideLegalMoves();
+            _activePiece = targetTile.Piece;
+            _ActiveLegalTiles();
         }
     }
 
-    private void MovePiece(Tile startTile, Tile targetTile)
+    private void _MovePiece(Tile targetTile)
     {
-        _selectedTileWithPiece.Piece.Move(targetTile.Pos);
-        // swap piece owners
-        targetTile.Piece = _selectedTileWithPiece.Piece;
-        startTile.Piece = null;
-    }
+        // swap Piece owners first
+        GetTileAtPosition(_activePiece.transform.position).Piece = null;
+        targetTile.Piece = _activePiece;
+        // then move the piece
+        _activePiece.transform.position = targetTile.Pos;
 
-    private void _ShowLegalMoves(Vector2 pos)
+        if (targetTile.IsBlackHomeCell || targetTile.IsWhiteHomeCell)
+            Debug.Log("Player " + ( _isBlackTurn ? "black":"white") + " win !");
+    }
+    
+    private void _NextMove(Tile lastTargetTile)
     {
-        _HideLegalMoves();
+        _isBlackTurn = !_isBlackTurn;
+        var currentPlayerPieces = _isBlackTurn ? _blackPieces : _whitePieces;
+        _activePiece = currentPlayerPieces.FirstOrDefault(x => x.Value.Color == lastTargetTile.Color).Value;
+        bool canMove = _ActiveLegalTiles();
         
-        // left diagonal
-        Vector2 ld = new Vector2(pos.x - 1, pos.y + 1);
-        // up direction
-        Vector2 up = new Vector2(pos.x, pos.y + 1);
-        // right diagonal
-        Vector2 rd = new Vector2(pos.x + 1, pos.y + 1);
-
-        bool testLd = true;
-        bool testUp = true;
-        bool testRd = true;
-
-        for (int i = 0; i < 8; i++)
+        if (!canMove)
         {
-            if (testLd)
-            {
-                Tile ldTile = GetTileAtPosition(ld);
-                if (ldTile == null || ldTile.Piece != null)
-                {
-                    testLd = false;
-                }
-                else
-                {
-                    ldTile.Targetable = true;
-                    ld.x--;
-                    ld.y++;
-                }
-            }
-            if (testUp)
-            {
-                Tile upTile = GetTileAtPosition(up);
-                if (upTile == null || upTile.Piece != null)
-                {
-                    testUp = false;
-                }
-                else
-                {
-                    upTile.Targetable = true;
-                    up.y++;
-                }
-            }
-            if (testRd)
-            {
-                Tile rdTile = GetTileAtPosition(rd);
-                if (rdTile == null || rdTile.Piece != null)
-                {
-                    testRd = false;
-                }
-                else
-                {
-                    rdTile.Targetable = true;
-                    rd.x++;
-                    rd.y++;
-                }
-            }
+            Debug.Log("no available moves");
+            _isBlackTurn = !_isBlackTurn;
+            currentPlayerPieces = _isBlackTurn ? _blackPieces : _whitePieces;
+            _activePiece = currentPlayerPieces.FirstOrDefault(x => x.Value.Color == lastTargetTile.Color).Value;
+            canMove = _ActiveLegalTiles();
+
+            if (!canMove)
+                Debug.Log("Game ended");
         }
     }
 
-    private void _HideLegalMoves()
+    private bool _ActiveLegalTiles()
     {
-        foreach (var tile in _tiles.Where(kvp => kvp.Value.Targetable).ToList())
-            tile.Value.Targetable = false;
+        _DisableAllTiles();
+
+        bool canMove = false;
+        Vector2 startPos = _activePiece.transform.position;
+
+        if (_isBlackTurn && _activePiece.IsBlack)
+        {
+            var upL = new Vector2(startPos.x - 1, startPos.y + 1);
+            var up = new Vector2(startPos.x, startPos.y + 1);
+            var upR = new Vector2(startPos.x + 1, startPos.y + 1);
+            var testUpL = true;
+            var testUp = true;
+            var testUpR = true;
+
+            for (int i = 0; i < TILE_COUNT_Y; i++)
+            {
+                if (testUpL)
+                {
+                    Tile upLTile = GetTileAtPosition(upL);
+
+                    if (upLTile == null || upLTile.Piece != null)
+                    {
+                        testUpL = false;
+                    }
+                    else
+                    {
+                        canMove = true;
+                        upLTile.Targetable = true;
+                        upL.x--;
+                        upL.y++;
+                    }
+                }
+                if (testUp)
+                {
+                    Tile upTile = GetTileAtPosition(up);
+                    if (upTile == null || upTile.Piece != null)
+                    {
+                        testUp = false;
+                    }
+                    else
+                    {
+                        canMove = true;
+                        upTile.Targetable = true;
+                        up.y++;
+                    }
+                }
+                if (testUpR)
+                {
+                    Tile upRTile = GetTileAtPosition(upR);
+                    if (upRTile == null || upRTile.Piece != null)
+                    {
+                        testUpR = false;
+                    }
+                    else
+                    {
+                        canMove = true;
+                        upRTile.Targetable = true;
+                        upR.x++;
+                        upR.y++;
+                    }
+                }
+            }
+        }
+        else if (!_isBlackTurn && !_activePiece.IsBlack)
+        {
+            var downL = new Vector2(startPos.x - 1, startPos.y - 1);
+            var down = new Vector2(startPos.x, startPos.y - 1);
+            var downR = new Vector2(startPos.x + 1, startPos.y - 1);
+            var testDownL = true;
+            var testDown = true;
+            var testDownR = true;
+
+            for (int i = TILE_COUNT_Y; i > 0; i--)
+            {
+                if (testDownL)
+                {
+                    Tile downLTile = GetTileAtPosition(downL);
+                    if (downLTile == null || downLTile.Piece != null)
+                    {
+                        testDownL = false;
+                    }
+                    else
+                    {
+                        canMove = true;
+                        downLTile.Targetable = true;
+                        downL.x--;
+                        downL.y--;
+                    }
+                }
+                if (testDown)
+                {
+                    Tile downTile = GetTileAtPosition(down);
+                    if (downTile == null || downTile.Piece != null)
+                    {
+                        testDown = false;
+                    }
+                    else
+                    {
+                        canMove = true;
+                        downTile.Targetable = true;
+                        down.y--;
+                    }
+                }
+                if (testDownR)
+                {
+                    Tile downRTile = GetTileAtPosition(downR);
+                    if (downRTile == null || downRTile.Piece != null)
+                    {
+                        testDownR = false;
+                    }
+                    else
+                    {
+                        canMove = true;
+                        downRTile.Targetable = true;
+                        downR.x++;
+                        downR.y--;
+                    }
+                }
+            }
+        }
+        return canMove;
     }
 
-     #region Network Events
+    private void _DisableAllTiles()
+    {
+        foreach (var tile in _tiles.Values.Where(kvp => kvp.Targetable))
+            tile.Targetable = false;
+    }
+
+     #region Events
     private void _RegisterEvents()
     {
-        /* Set callbacks whenever a client will receive a message */
-
-        // when Server and Client receiving a NetWelcome message
+        // Local events
+        // if (_isLocalGame)
+        EventManager.AddListener("TileClicked", _OnTileClicked);
+        EventManager.AddListener("StartLocalGame", _OnStartLocalGame);
+        
+        // Network events
         NetUtility.S_WELCOME += _OnWelcomeServer;
+
         NetUtility.C_WELCOME += _OnWelcomeClient;
+        NetUtility.C_START_GAME += _OnStartGameClient;
     }
 
     private void _UnregisterEvents()
     {
+        EventManager.RemoveListener("TileClicked", _OnTileClicked);
+        EventManager.RemoveListener("StartLocalGame", _OnStartLocalGame);
+
         NetUtility.S_WELCOME -= _OnWelcomeServer;
+
         NetUtility.C_WELCOME -= _OnWelcomeClient;
+        NetUtility.C_START_GAME -= _OnStartGameClient;
+    }
+
+    // Local
+    private void _OnStartLocalGame()
+    {
+        _SpawnAllTiles();
+        _GenerateAllPieces();
     }
 
     // Server
@@ -224,6 +332,13 @@ public class BoardManager : MonoBehaviour
 
         // return the message back to the client
         Server.Instance.SendToClient(cnn, nw);
+
+        // start the game if 2 players are connected
+        // if (_playerCount == 1)
+        if (true)
+        {
+            Server.Instance.Broadcast(new NetStartGame());
+        }
     }
 
     // Client
@@ -234,6 +349,12 @@ public class BoardManager : MonoBehaviour
         _currentTeam = nw.AssignedTeam;
 
         Debug.Log($"Assigned team : {nw.AssignedTeam}");
+    }
+    
+    private void _OnStartGameClient(NetMessage msg)
+    {
+        _SpawnAllTiles();
+        _GenerateAllPieces();
     }
     #endregion
 }

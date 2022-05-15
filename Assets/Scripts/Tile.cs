@@ -6,7 +6,6 @@ public class Tile : MonoBehaviour
     [SerializeField] private GameObject _hoverHighlight;
     [SerializeField] private GameObject _legalHighlight;
 
-    private bool _isHomeCell;
     private bool _targetable;
     private Vector2 _pos;
 
@@ -24,7 +23,7 @@ public class Tile : MonoBehaviour
 
     private void OnMouseDown()
     {
-        EventManager.TriggerEvent("OnTileClicked", this);
+        EventManager.TriggerEvent("TileClicked", this);
     }
 
     public void Initialize(Vector2 initPos, Color initColor)
@@ -32,12 +31,14 @@ public class Tile : MonoBehaviour
         _pos = initPos;
         _color = initColor;
         _renderer.color = initColor;
-        _isHomeCell = (_pos.y == 0) || (_pos.y == 7);
+        IsBlackHomeCell = _pos.y == 0;
+        IsWhiteHomeCell = _pos.y == 7;
     }
 
     public Vector2 Pos => _pos;
     public Color Color => _color;
-    public bool IsHomeCell => _isHomeCell;
+    public bool IsBlackHomeCell { set; get; }
+    public bool IsWhiteHomeCell { set; get; }
     public Piece Piece { get; set; }
     public bool Targetable
     {

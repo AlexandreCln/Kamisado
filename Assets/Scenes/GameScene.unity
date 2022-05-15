@@ -1453,6 +1453,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _blankTilePrefab: {fileID: 8671934754693988446, guid: c84f1ab2309ac6e4c8e50749fb7f22eb, type: 3}
+  _blankPiecePrefab: {fileID: -8795005664826598696, guid: 5855802e8f075c641aa93621ef0fe49f, type: 3}
   _cam: {fileID: 3705283}
   _orange: {r: 0.8431373, g: 0.454902, b: 0.12941177, a: 1}
   _blue: {r: 0, g: 0.42352945, b: 0.6784314, a: 1}
@@ -2263,7 +2264,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e221c5cfc45c73418311b80710bf08e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _blankPiecePrefab: {fileID: -8795005664826598696, guid: 5855802e8f075c641aa93621ef0fe49f, type: 3}
 --- !u!4 &1350790866
 Transform:
   m_ObjectHideFlags: 0
