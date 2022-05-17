@@ -14,7 +14,6 @@ public class Piece : MonoBehaviour
         }
         transform.Find("InnerCircle").GetComponent<SpriteRenderer>().color = spawnTile.Color;
         Color = spawnTile.Color;
-        transform.SetParent(transform);
         spawnTile.Piece = this;
     }
 

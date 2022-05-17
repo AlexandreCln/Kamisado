@@ -53,6 +53,7 @@ public class EventManager : MonoBehaviour
             instance._events.Add(eventName, evt);
         }
     }
+    
     public static void AddListener(string eventName, UnityAction<object> listener)
     {
         TypedEvent evt = null;

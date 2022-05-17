@@ -24,8 +24,8 @@ public static class NetUtility
         {
             case OperationCode.KEEP_ALIVE: msg = new NetKeepAlive(stream); break;
             case OperationCode.WELCOME: msg = new NetWelcome(stream); break;
-            // case OperationCode.START_GAME: msg = new NetStartGame(stream); break;
-            // case OperationCode.MAKE_MOVE: msg = new NetMakeMove(stream); break;
+            case OperationCode.START_GAME: msg = new NetStartGame(stream); break;
+            case OperationCode.MAKE_MOVE: msg = new NetMakeMove(stream); break;
             // case OperationCode.REMATCH: msg = new NetRematch(stream); break;
             default:
                 Debug.LogError("Message received had no OperationCode");

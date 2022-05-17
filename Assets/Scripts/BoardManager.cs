@@ -7,7 +7,6 @@ public class BoardManager : MonoBehaviour
 {    
     [SerializeField] private Tile _blankTilePrefab;
     [SerializeField] private Piece _blankPiecePrefab;
-
     [SerializeField] private Transform _cam;
     [SerializeField] private float _camDistance = 13f;
 
@@ -27,6 +26,7 @@ public class BoardManager : MonoBehaviour
     private Dictionary<Vector2, Piece> _blackPieces;
     private Dictionary<Vector2, Piece> _whitePieces;
     private Piece _activePiece;
+    private bool _isLocalGame = false;
     private bool _isFirstTurn = true;
     private bool _isBlackTurn = true;
 
@@ -38,7 +38,8 @@ public class BoardManager : MonoBehaviour
     private void Awake()
     {
         _cam.transform.position = new Vector3(TILE_COUNT_X/2 - 0.5f, TILE_COUNT_Y/2 - 0.5f, -_camDistance);
-        _RegisterEvents();
+        _RegisterLocalEvents();
+        _RegisterNetworkEvents();
     }
 
     private void _SpawnAllTiles()
@@ -64,7 +65,7 @@ public class BoardManager : MonoBehaviour
         return spawnedTile;
     }
 
-    private void _GenerateAllPieces()
+    private void _SpawnAllPieces()
     {       
         _blackPieces = new Dictionary<Vector2, Piece>();
         foreach (Tile tile in _tiles.Values.Where(t => t.IsBlackHomeCell))
@@ -80,6 +81,7 @@ public class BoardManager : MonoBehaviour
         Vector2 piecePos = new Vector2(spawnTile.Pos.x, spawnTile.Pos.y);
         Piece spawnedPiece = Instantiate(_blankPiecePrefab, piecePos, Quaternion.identity);
         spawnedPiece.Initialize(spawnTile);
+        spawnedPiece.transform.SetParent(transform);
 
         return spawnedPiece;
     }
@@ -97,7 +99,7 @@ public class BoardManager : MonoBehaviour
         return Color.white;
     }
 
-    public Tile GetTileAtPosition(Vector2 pos)
+    private Tile _GetTileAtPosition(Vector2 pos)
     {
         if (_tiles.TryGetValue(pos, out Tile tile))
             return _tiles[pos];
@@ -107,40 +109,64 @@ public class BoardManager : MonoBehaviour
 
     private void _OnTileClicked(object data)
     {
+        if (!_isLocalGame && !_IsMyturn())
+            return;
+
         Tile targetTile = (Tile)data;
 
         if (targetTile.Targetable)
         {
+            if (!_isLocalGame)
+            {
+                Debug.Log("send move to server");
+                NetMakeMove mm = new NetMakeMove();
+                mm.OriginX = (int)_activePiece.transform.position.x;
+                mm.OriginY = (int)_activePiece.transform.position.y;
+                mm.TargetY = (int)targetTile.Pos.y;
+                mm.TargetX = (int)targetTile.Pos.x;
+                mm.TeamId = _currentTeam;
+                Client.Instance.SendToServer(mm);
+            }
+
+            Debug.Log("move locally");
             _isFirstTurn = false;
-            _MovePiece(targetTile);
-            _NextMove(targetTile);
+            _MoveActivePiece(targetTile);
+            _PrepareNextMove(targetTile);
         }   
-        else if (_isFirstTurn && targetTile.Piece != null)
-        {
+        else if (
+            _isFirstTurn && targetTile.Piece != null && 
+            (targetTile.Piece.IsBlack && _isBlackTurn || !targetTile.Piece.IsBlack && !_isBlackTurn) &&
+            (_isLocalGame || !_isLocalGame && _IsMyturn())
+        ) {
             _activePiece = targetTile.Piece;
             _ActiveLegalTiles();
         }
     }
 
-    private void _MovePiece(Tile targetTile)
+    private bool _IsMyturn()
+    {
+        return _currentTeam == 0 && _isBlackTurn || _currentTeam == 1 && !_isBlackTurn;
+    }
+
+    private void _MoveActivePiece(Tile targetTile)
     {
         // swap Piece owners first
-        GetTileAtPosition(_activePiece.transform.position).Piece = null;
+        _GetTileAtPosition(_activePiece.transform.position).Piece = null;
         targetTile.Piece = _activePiece;
         // then move the piece
         _activePiece.transform.position = targetTile.Pos;
 
         if (targetTile.IsBlackHomeCell || targetTile.IsWhiteHomeCell)
-            Debug.Log("Player " + ( _isBlackTurn ? "black":"white") + " win !");
+            EventManager.TriggerEvent("GameEnded", _isBlackTurn ? "black" : "white");
     }
     
-    private void _NextMove(Tile lastTargetTile)
+    private void _PrepareNextMove(Tile lastTargetTile)
     {
         _isBlackTurn = !_isBlackTurn;
         var currentPlayerPieces = _isBlackTurn ? _blackPieces : _whitePieces;
         _activePiece = currentPlayerPieces.FirstOrDefault(x => x.Value.Color == lastTargetTile.Color).Value;
         bool canMove = _ActiveLegalTiles();
-        
+
         if (!canMove)
         {
             Debug.Log("no available moves");
@@ -174,7 +200,7 @@ public class BoardManager : MonoBehaviour
             {
                 if (testUpL)
                 {
-                    Tile upLTile = GetTileAtPosition(upL);
+                    Tile upLTile = _GetTileAtPosition(upL);
 
                     if (upLTile == null || upLTile.Piece != null)
                     {
@@ -190,7 +216,7 @@ public class BoardManager : MonoBehaviour
                 }
                 if (testUp)
                 {
-                    Tile upTile = GetTileAtPosition(up);
+                    Tile upTile = _GetTileAtPosition(up);
                     if (upTile == null || upTile.Piece != null)
                     {
                         testUp = false;
@@ -204,7 +230,7 @@ public class BoardManager : MonoBehaviour
                 }
                 if (testUpR)
                 {
-                    Tile upRTile = GetTileAtPosition(upR);
+                    Tile upRTile = _GetTileAtPosition(upR);
                     if (upRTile == null || upRTile.Piece != null)
                     {
                         testUpR = false;
@@ -232,7 +258,7 @@ public class BoardManager : MonoBehaviour
             {
                 if (testDownL)
                 {
-                    Tile downLTile = GetTileAtPosition(downL);
+                    Tile downLTile = _GetTileAtPosition(downL);
                     if (downLTile == null || downLTile.Piece != null)
                     {
                         testDownL = false;
@@ -247,7 +273,7 @@ public class BoardManager : MonoBehaviour
                 }
                 if (testDown)
                 {
-                    Tile downTile = GetTileAtPosition(down);
+                    Tile downTile = _GetTileAtPosition(down);
                     if (downTile == null || downTile.Piece != null)
                     {
                         testDown = false;
@@ -261,7 +287,7 @@ public class BoardManager : MonoBehaviour
                 }
                 if (testDownR)
                 {
-                    Tile downRTile = GetTileAtPosition(downR);
+                    Tile downRTile = _GetTileAtPosition(downR);
                     if (downRTile == null || downRTile.Piece != null)
                     {
                         testDownR = false;
@@ -286,47 +312,54 @@ public class BoardManager : MonoBehaviour
     }
 
      #region Events
-    private void _RegisterEvents()
+    private void _RegisterLocalEvents()
     {
-        // Local events
-        // if (_isLocalGame)
         EventManager.AddListener("TileClicked", _OnTileClicked);
         EventManager.AddListener("StartLocalGame", _OnStartLocalGame);
-        
-        // Network events
+    }
+    private void _RegisterNetworkEvents()
+    {
         NetUtility.S_WELCOME += _OnWelcomeServer;
+        NetUtility.S_MAKE_MOVE += _OnMakeMoveServer;
 
         NetUtility.C_WELCOME += _OnWelcomeClient;
         NetUtility.C_START_GAME += _OnStartGameClient;
+        NetUtility.C_MAKE_MOVE += _OnMakeMoveClient;
     }
 
-    private void _UnregisterEvents()
+    private void _UnregisterLocalEvents()// TODO: unregister events check
     {
         EventManager.RemoveListener("TileClicked", _OnTileClicked);
         EventManager.RemoveListener("StartLocalGame", _OnStartLocalGame);
+    }
 
+    private void _UnregisterNetworkEvents()// TODO: CALL + unregister events check
+    {
         NetUtility.S_WELCOME -= _OnWelcomeServer;
+        NetUtility.S_MAKE_MOVE -= _OnMakeMoveServer;
 
         NetUtility.C_WELCOME -= _OnWelcomeClient;
         NetUtility.C_START_GAME -= _OnStartGameClient;
+        NetUtility.C_MAKE_MOVE -= _OnMakeMoveClient;
     }
 
     // Local
     private void _OnStartLocalGame()
     {
+        _isLocalGame = true;
         _SpawnAllTiles();
-        _GenerateAllPieces();
+        _SpawnAllPieces();
     }
 
     // Server
     private void _OnWelcomeServer(NetMessage msg, NetworkConnection cnn)
     {
         /* When any client ask the driver to connect the configured server, on succes his connection receive a 
-           NetworkEvent.Type.Connect, when he open this message he send a NetWelcome to the server. */
+           NetworkEvent.Type.Connect, when the client open this message he send a NetWelcome to the server. */
         NetWelcome nw = msg as NetWelcome;
-        // NetWelcome is like : Hey I'm connected and I send you a box, can you populated it with the team ID ?
+        // NetWelcome is like : Hey I'm connected and I send you a message, can you fill it with the team ID ?
 
-        // populate the client's message with a team ID, based on the number of player
+        // fill the client's message with a team ID, based on the number of player
         nw.AssignedTeam = ++_playerCount;
         Debug.Log("Handle a NetWelcome message from a client, then send it back with AssignedTeam ID : " + nw.AssignedTeam);
 
@@ -334,11 +367,16 @@ public class BoardManager : MonoBehaviour
         Server.Instance.SendToClient(cnn, nw);
 
         // start the game if 2 players are connected
-        // if (_playerCount == 1)
-        if (true)
+        if (_playerCount == 1)
         {
             Server.Instance.Broadcast(new NetStartGame());
         }
+    }
+
+    private void _OnMakeMoveServer(NetMessage msg, NetworkConnection cnn)
+    {
+        NetMakeMove mm = msg as NetMakeMove;
+        Server.Instance.Broadcast(mm);
     }
 
     // Client
@@ -347,14 +385,34 @@ public class BoardManager : MonoBehaviour
         NetWelcome nw = msg as NetWelcome;
         // New connected client assign a team itself, from the message deserialized earlier
         _currentTeam = nw.AssignedTeam;
-
         Debug.Log($"Assigned team : {nw.AssignedTeam}");
     }
     
     private void _OnStartGameClient(NetMessage msg)
     {
         _SpawnAllTiles();
-        _GenerateAllPieces();
+        _SpawnAllPieces();
+        
+        if (_currentTeam == 1)
+        {
+            _cam.Rotate(Vector3.forward * 180);
+        }
+    }
+
+    private void _OnMakeMoveClient(NetMessage msg)
+    {
+        _isFirstTurn = false;
+        NetMakeMove mm = msg as NetMakeMove;
+        if (mm.TeamId == _currentTeam)
+            return;
+
+        // handle first move
+        if (_activePiece == null)
+            _activePiece = _GetTileAtPosition(new Vector2(mm.OriginX, mm.OriginY)).Piece;
+
+        Tile targetTile = _GetTileAtPosition(new Vector2(mm.TargetX, mm.TargetY));
+        _MoveActivePiece(targetTile);
+        _PrepareNextMove(targetTile);
     }
     #endregion
 }

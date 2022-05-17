@@ -73,7 +73,7 @@ public class Client : MonoBehaviour
         }
     }
 
-    private void _SendToServer(NetMessage msg)
+    public void SendToServer(NetMessage msg)
     {
         // a writer can serialize data over the network
         DataStreamWriter writer;
@@ -97,7 +97,7 @@ public class Client : MonoBehaviour
         {
             if (cmd == NetworkEvent.Type.Connect)
             {
-                _SendToServer(new NetWelcome());
+                SendToServer(new NetWelcome());
                 Debug.Log("Success connect event : Send to server a NetWelcome to ask the AssignedTeam ID");
             }
             else if (cmd == NetworkEvent.Type.Data)
@@ -130,7 +130,7 @@ public class Client : MonoBehaviour
     private void _OnKeepAlive(NetMessage nm)
     {
         /* Keep track of the keep alive messages send by the server and send it back, to keep both side alive */
-        _SendToServer(nm);
+        SendToServer(nm);
     }
     #endregion
 }
