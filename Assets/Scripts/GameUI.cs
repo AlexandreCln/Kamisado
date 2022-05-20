@@ -6,21 +6,18 @@ public class GameUI : MonoBehaviour
     public Server server;
     public Client client;
     [SerializeField] private TMP_InputField _addressInput;
-    [SerializeField] private GameObject _victoryScreen;
+    [SerializeField] private GameObject _victoryLocalScreen;
+    [SerializeField] private GameObject _victoryNetworkScreen;
+    [SerializeField] private GameObject _waitingRematchScreen;
     private Animator _menuAnimator;
 
-    // TODO: remove singleton
-    #region Singleton implementation 
-    public static GameUI Instance { set; get; }
     void Awake()
     {
-        Instance = this;
         _menuAnimator = GetComponent<Animator>();
         _RegisterEvents();
     }
-    #endregion
 
-    // START MENU
+    // START MENU BUTTONS
     public void OnLocalGameButton()
     {
         _menuAnimator.SetTrigger("InGameMenu");
@@ -32,7 +29,7 @@ public class GameUI : MonoBehaviour
         _menuAnimator.SetTrigger("OnlineMenu");
     }
 
-    // ONLINE MENU
+    // ONLINE MENU BUTTONS
     public void OnOnlineHostButton()
     {
         _menuAnimator.SetTrigger("HostMenu");
@@ -50,7 +47,7 @@ public class GameUI : MonoBehaviour
         _menuAnimator.SetTrigger("StartMenu");
     }
 
-    // HOST MENU
+    // HOST MENU BUTTONS
     public void OnHostBackButton()
     {
         server.Shutdown();
@@ -58,22 +55,50 @@ public class GameUI : MonoBehaviour
         _menuAnimator.SetTrigger("OnlineMenu");
     }
 
-    private void _RegisterEvents()
+    // VICTORY SCREEN BUTTONS
+    public void OnRematchLocalButton()
     {
-        EventManager.AddListener("GameEnded", _OnGameEnded);
-        
-        NetUtility.C_START_GAME += _OnStartGameClient;
+        _victoryLocalScreen.SetActive(false);
+        EventManager.TriggerEvent("LocalRematch");
+    }
+    
+    public void OnRematchDemandButton()
+    {
+        _victoryNetworkScreen.SetActive(false);
+        _waitingRematchScreen.SetActive(true);
+        Client.Instance.SendToServer(new NetRematchDemand());
     }
 
+    private void _RegisterEvents()
+    {
+        EventManager.AddListener("LocalGameEnded", _OnLocalGameEnded);
+        EventManager.AddListener("NetworkGameEnded", _OnNetworkGameEnded);
+        
+        NetUtility.C_START_GAME += _OnStartGameClient;
+        NetUtility.C_REMATCH += _OnRematch;
+    }
+
+    // Local Events
+    private void _OnLocalGameEnded(object winnerName)
+    {
+        _victoryLocalScreen.SetActive(true);
+        _victoryLocalScreen.transform.Find("WinnerText").GetComponent<TMP_Text>().text = $"Player {(string)winnerName} win !";
+    }
+
+    private void _OnNetworkGameEnded(object winnerName)
+    {
+        _victoryNetworkScreen.SetActive(true);
+        _victoryNetworkScreen.transform.Find("WinnerText").GetComponent<TMP_Text>().text = $"Player {(string)winnerName} win !";
+    }
+
+    // Network Events
     private void _OnStartGameClient(NetMessage msg)
     {
         _menuAnimator.SetTrigger("InGameMenu");
     }
 
-    // Events
-    private void _OnGameEnded(object winnerName)
+    private void _OnRematch(NetMessage msg)
     {
-        _victoryScreen.SetActive(true);
-        _victoryScreen.transform.Find("WinnerText").GetComponent<TMP_Text>().text = $"Player {(string)winnerName} win !";
+        _waitingRematchScreen.SetActive(false);
     }
 }

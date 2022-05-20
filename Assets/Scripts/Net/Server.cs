@@ -72,7 +72,7 @@ public class Server : MonoBehaviour
 
     public void Broadcast(NetMessage msg)
     {
-        /* Send 1 message to every clients */
+        /* Send the same message to every clients */
         for (int i = 0; i < _connections.Length; i++)
         {
             if (_connections[i].IsCreated)

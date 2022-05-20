@@ -4,6 +4,7 @@ public class Piece : MonoBehaviour
 {
     public Color Color { set; get; }
     public bool IsBlack { set; get; }
+    public Vector2 _initPos;
 
     public void Initialize(Tile spawnTile)
     {
@@ -14,11 +15,13 @@ public class Piece : MonoBehaviour
         }
         transform.Find("InnerCircle").GetComponent<SpriteRenderer>().color = spawnTile.Color;
         Color = spawnTile.Color;
+        _initPos = transform.position;
+        spawnTile.InitPiece = this;
         spawnTile.Piece = this;
     }
 
-    public void Move(Vector2 pos)
+    public void ResetPos()
     {
-        transform.position = pos;
+        transform.position = _initPos;
     }
 }

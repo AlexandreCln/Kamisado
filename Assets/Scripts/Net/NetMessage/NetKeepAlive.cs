@@ -18,11 +18,6 @@ public class NetKeepAlive : NetMessage
         writer.WriteByte((byte)Code);
     }
 
-    /// <summary>Parse the data in the same order as it was packaged</summary>
-    public override void Deserialize(DataStreamReader reader)
-    {
-    }
-
     public override void ReceivedOnServer(NetworkConnection cnn)
     {
         NetUtility.S_KEEP_ALIVE?.Invoke(this, cnn);

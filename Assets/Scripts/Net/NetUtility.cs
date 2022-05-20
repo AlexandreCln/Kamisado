@@ -2,14 +2,14 @@ using System;
 using Unity.Networking.Transport;
 using UnityEngine;
 
-
 public enum OperationCode
 {
     KEEP_ALIVE = 1,
     WELCOME = 2,
     START_GAME = 3,
     MAKE_MOVE = 4,
-    REMATCH = 5
+    REMATCH_DEMAND = 5,
+    REMATCH = 6
 }
 
 public static class NetUtility
@@ -26,7 +26,8 @@ public static class NetUtility
             case OperationCode.WELCOME: msg = new NetWelcome(stream); break;
             case OperationCode.START_GAME: msg = new NetStartGame(stream); break;
             case OperationCode.MAKE_MOVE: msg = new NetMakeMove(stream); break;
-            // case OperationCode.REMATCH: msg = new NetRematch(stream); break;
+            case OperationCode.REMATCH_DEMAND: msg = new NetRematchDemand(stream); break;
+            case OperationCode.REMATCH: msg = new NetRematch(stream); break;
             default:
                 Debug.LogError("Message received had no OperationCode");
                 break;
@@ -50,5 +51,5 @@ public static class NetUtility
     public static Action<NetMessage, NetworkConnection> S_WELCOME;
     public static Action<NetMessage, NetworkConnection> S_START_GAME;
     public static Action<NetMessage, NetworkConnection> S_MAKE_MOVE;
-    public static Action<NetMessage, NetworkConnection> S_REMATCH;
+    public static Action<NetMessage, NetworkConnection> S_REMATCH_DEMAND;
 }

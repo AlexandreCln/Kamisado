@@ -8,7 +8,6 @@ public class Tile : MonoBehaviour
 
     private bool _targetable;
     private Vector2 _pos;
-
     private Color _color;
 
     private void OnMouseEnter()
@@ -39,6 +38,7 @@ public class Tile : MonoBehaviour
     public Color Color => _color;
     public bool IsBlackHomeCell { set; get; }
     public bool IsWhiteHomeCell { set; get; }
+    public Piece InitPiece { get; set; }
     public Piece Piece { get; set; }
     public bool Targetable
     {

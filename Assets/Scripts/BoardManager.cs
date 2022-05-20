@@ -29,10 +29,11 @@ public class BoardManager : MonoBehaviour
     private bool _isLocalGame = false;
     private bool _isFirstTurn = true;
     private bool _isBlackTurn = true;
+    private int _readyForRematchPlayers = 0;
 
     #region Networking
     private int _playerCount = -1;
-    private int _currentTeam = -1;
+    private int _teamId = -1;
     #endregion
 
     private void Awake()
@@ -124,11 +125,11 @@ public class BoardManager : MonoBehaviour
                 mm.OriginY = (int)_activePiece.transform.position.y;
                 mm.TargetY = (int)targetTile.Pos.y;
                 mm.TargetX = (int)targetTile.Pos.x;
-                mm.TeamId = _currentTeam;
+                mm.TeamId = _teamId;
                 Client.Instance.SendToServer(mm);
             }
 
-            Debug.Log("move locally");
+            Debug.Log($"move Piece locally from {_activePiece.transform.position.x};{_activePiece.transform.position.y} to {targetTile.Pos.x};{targetTile.Pos.y}");
             _isFirstTurn = false;
             _MoveActivePiece(targetTile);
             _PrepareNextMove(targetTile);
@@ -145,7 +146,7 @@ public class BoardManager : MonoBehaviour
 
     private bool _IsMyturn()
     {
-        return _currentTeam == 0 && _isBlackTurn || _currentTeam == 1 && !_isBlackTurn;
+        return _teamId == 0 && _isBlackTurn || _teamId == 1 && !_isBlackTurn;
     }
 
     private void _MoveActivePiece(Tile targetTile)
@@ -157,7 +158,15 @@ public class BoardManager : MonoBehaviour
         _activePiece.transform.position = targetTile.Pos;
 
         if (targetTile.IsBlackHomeCell || targetTile.IsWhiteHomeCell)
-            EventManager.TriggerEvent("GameEnded", _isBlackTurn ? "black" : "white");
+            _TriggerVictory();
+    }
+
+    private void _TriggerVictory()
+    {
+        EventManager.TriggerEvent(
+            _isLocalGame ? "LocalGameEnded" : "NetworkGameEnded", 
+            _isBlackTurn ? "black" : "white"
+        );
     }
     
     private void _PrepareNextMove(Tile lastTargetTile)
@@ -176,7 +185,7 @@ public class BoardManager : MonoBehaviour
             canMove = _ActiveLegalTiles();
 
             if (!canMove)
-                Debug.Log("Game ended");
+                _TriggerVictory();
         }
     }
 
@@ -311,20 +320,23 @@ public class BoardManager : MonoBehaviour
             tile.Targetable = false;
     }
 
-     #region Events
+    #region Events
     private void _RegisterLocalEvents()
     {
         EventManager.AddListener("TileClicked", _OnTileClicked);
         EventManager.AddListener("StartLocalGame", _OnStartLocalGame);
+        EventManager.AddListener("LocalRematch", _OnLocalRematch);
     }
     private void _RegisterNetworkEvents()
     {
         NetUtility.S_WELCOME += _OnWelcomeServer;
         NetUtility.S_MAKE_MOVE += _OnMakeMoveServer;
+        NetUtility.S_REMATCH_DEMAND += _OnRematchDemand;
 
         NetUtility.C_WELCOME += _OnWelcomeClient;
         NetUtility.C_START_GAME += _OnStartGameClient;
         NetUtility.C_MAKE_MOVE += _OnMakeMoveClient;
+        NetUtility.C_REMATCH += _OnRematch;
     }
 
     private void _UnregisterLocalEvents()// TODO: unregister events check
@@ -333,7 +345,7 @@ public class BoardManager : MonoBehaviour
         EventManager.RemoveListener("StartLocalGame", _OnStartLocalGame);
     }
 
-    private void _UnregisterNetworkEvents()// TODO: CALL + unregister events check
+    private void _UnregisterNetworkEvents()// TODO: CALL on disable ? + unregister events check
     {
         NetUtility.S_WELCOME -= _OnWelcomeServer;
         NetUtility.S_MAKE_MOVE -= _OnMakeMoveServer;
@@ -379,12 +391,37 @@ public class BoardManager : MonoBehaviour
         Server.Instance.Broadcast(mm);
     }
 
+    private void _OnLocalRematch()
+    {
+        _ResetGame();
+    }
+
+    private void _OnRematch(NetMessage ms)
+    {
+        _ResetGame();
+        _readyForRematchPlayers = 0;
+    }
+
+    private void _ResetGame()
+    {
+        foreach (var tile in _tiles.Values)
+            tile.Piece = tile.InitPiece;
+        foreach (var piece in _whitePieces.Values)
+            piece.ResetPos();
+        foreach (var piece in _blackPieces.Values)
+            piece.ResetPos();
+
+        _DisableAllTiles();
+        _activePiece = null;
+        _isFirstTurn = true;
+    }
+
     // Client
     private void _OnWelcomeClient(NetMessage msg)
     {
         NetWelcome nw = msg as NetWelcome;
         // New connected client assign a team itself, from the message deserialized earlier
-        _currentTeam = nw.AssignedTeam;
+        _teamId = nw.AssignedTeam;
         Debug.Log($"Assigned team : {nw.AssignedTeam}");
     }
     
@@ -393,7 +430,7 @@ public class BoardManager : MonoBehaviour
         _SpawnAllTiles();
         _SpawnAllPieces();
         
-        if (_currentTeam == 1)
+        if (_teamId == 1)
         {
             _cam.Rotate(Vector3.forward * 180);
         }
@@ -403,7 +440,9 @@ public class BoardManager : MonoBehaviour
     {
         _isFirstTurn = false;
         NetMakeMove mm = msg as NetMakeMove;
-        if (mm.TeamId == _currentTeam)
+        Debug.Log($"Sender: {mm.TeamId} Receiver: {_teamId}");
+        Debug.Log("_isBlackTurn:"+_isBlackTurn);
+        if (mm.TeamId == _teamId)
             return;
 
         // handle first move
@@ -413,6 +452,12 @@ public class BoardManager : MonoBehaviour
         Tile targetTile = _GetTileAtPosition(new Vector2(mm.TargetX, mm.TargetY));
         _MoveActivePiece(targetTile);
         _PrepareNextMove(targetTile);
+    }
+
+    private void _OnRematchDemand(NetMessage msg, NetworkConnection conn)
+    {
+        if (++_readyForRematchPlayers == 2)
+            Server.Instance.Broadcast(new NetRematch());
     }
     #endregion
 }

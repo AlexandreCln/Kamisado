@@ -16,9 +16,8 @@ public class Client : MonoBehaviour
     public NetworkDriver driver;
     public Action connectionDropped;
     private NetworkConnection _connection;
-
     private bool _isActive = false;
-    private const float _keepAliveTickRate = 20f;
+    private const float _keepAliveTickRate = 10f;
     private float _lastKeepAlive;
 
     public void Init(string ip, ushort port)
