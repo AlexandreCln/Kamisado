@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Networking.Transport;
@@ -7,6 +8,8 @@ public class BoardManager : MonoBehaviour
 {    
     [SerializeField] private Tile _blankTilePrefab;
     [SerializeField] private Piece _blankPiecePrefab;
+    [SerializeField] private Image _blackPlayerIndicator;
+    [SerializeField] private Image _whitePlayerIndicator;
     [SerializeField] private Transform _cam;
     [SerializeField] private float _camDistance = 13f;
 
@@ -171,7 +174,7 @@ public class BoardManager : MonoBehaviour
     
     private void _PrepareNextMove(Tile lastTargetTile)
     {
-        _isBlackTurn = !_isBlackTurn;
+        SwitchTurn();
         var currentPlayerPieces = _isBlackTurn ? _blackPieces : _whitePieces;
         _activePiece = currentPlayerPieces.FirstOrDefault(x => x.Value.Color == lastTargetTile.Color).Value;
         bool canMove = _ActiveLegalTiles();
@@ -179,7 +182,7 @@ public class BoardManager : MonoBehaviour
         if (!canMove)
         {
             Debug.Log("no available moves");
-            _isBlackTurn = !_isBlackTurn;
+            SwitchTurn();
             currentPlayerPieces = _isBlackTurn ? _blackPieces : _whitePieces;
             _activePiece = currentPlayerPieces.FirstOrDefault(x => x.Value.Color == lastTargetTile.Color).Value;
             canMove = _ActiveLegalTiles();
@@ -187,6 +190,13 @@ public class BoardManager : MonoBehaviour
             if (!canMove)
                 _TriggerVictory();
         }
+    }
+
+    private void SwitchTurn()
+    {
+        _isBlackTurn = !_isBlackTurn;
+        _blackPlayerIndicator.enabled = _isBlackTurn;
+        _whitePlayerIndicator.enabled = !_isBlackTurn;
     }
 
     private bool _ActiveLegalTiles()

@@ -6,6 +6,7 @@ public class GameUI : MonoBehaviour
     public Server server;
     public Client client;
     [SerializeField] private TMP_InputField _addressInput;
+    [SerializeField] private GameObject _menusBackground;
     [SerializeField] private GameObject _victoryLocalScreen;
     [SerializeField] private GameObject _victoryNetworkScreen;
     [SerializeField] private GameObject _waitingRematchScreen;
@@ -20,6 +21,7 @@ public class GameUI : MonoBehaviour
     // START MENU BUTTONS
     public void OnLocalGameButton()
     {
+        _menusBackground.SetActive(false);
         _menuAnimator.SetTrigger("InGameMenu");
         EventManager.TriggerEvent("StartLocalGame");
     }
@@ -58,6 +60,7 @@ public class GameUI : MonoBehaviour
     // VICTORY SCREEN BUTTONS
     public void OnRematchLocalButton()
     {
+        _menusBackground.SetActive(false);
         _victoryLocalScreen.SetActive(false);
         EventManager.TriggerEvent("LocalRematch");
     }
@@ -81,6 +84,7 @@ public class GameUI : MonoBehaviour
     // Local Events
     private void _OnLocalGameEnded(object winnerName)
     {
+        _menusBackground.SetActive(true);
         _victoryLocalScreen.SetActive(true);
         _victoryLocalScreen.transform.Find("WinnerText").GetComponent<TMP_Text>().text = $"Player {(string)winnerName} win !";
     }
@@ -95,6 +99,7 @@ public class GameUI : MonoBehaviour
     private void _OnStartGameClient(NetMessage msg)
     {
         _menuAnimator.SetTrigger("InGameMenu");
+        _menusBackground.SetActive(false);
     }
 
     private void _OnRematch(NetMessage msg)
