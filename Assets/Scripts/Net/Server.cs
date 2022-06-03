@@ -19,7 +19,7 @@ public class Server : MonoBehaviour
     private NativeList<NetworkConnection> _connections;
 
     private bool _isActive = false;
-    private const int _connectionCapacity = 2; // max connections on the server
+    private const int _connectionCapacity = 2;
 
     private const float _keepAliveTickRate = 20f;
     private float _lastKeepAlive;

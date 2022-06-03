@@ -336,6 +336,7 @@ public class BoardManager : MonoBehaviour
         EventManager.AddListener("TileClicked", _OnTileClicked);
         EventManager.AddListener("StartLocalGame", _OnStartLocalGame);
         EventManager.AddListener("LocalRematch", _OnLocalRematch);
+        EventManager.AddListener("DisconnectHost", _OnDisconnectHost);
     }
     private void _RegisterNetworkEvents()
     {
@@ -404,6 +405,11 @@ public class BoardManager : MonoBehaviour
     private void _OnLocalRematch()
     {
         _ResetGame();
+    }
+
+    private void _OnDisconnectHost()
+    {
+        _playerCount--;
     }
 
     private void _OnRematch(NetMessage ms)
