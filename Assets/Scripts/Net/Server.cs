@@ -1,7 +1,6 @@
 using UnityEngine;
 using Unity.Networking.Transport;
 using Unity.Collections;
-using System;
 
 public class Server : MonoBehaviour
 {
@@ -15,7 +14,6 @@ public class Server : MonoBehaviour
     #endregion
 
     public NetworkDriver driver;
-    public Action connectionDropped;
     private NativeList<NetworkConnection> _connections;
 
     private bool _isActive = false;
@@ -38,6 +36,7 @@ public class Server : MonoBehaviour
         }
         else
         {
+            // Listen method sets the NetworkDriver to the Listen state, he will now actively listen for incoming connections
             driver.Listen();
             Debug.Log("Listening on port " + endpoint.Port);
         }
@@ -49,10 +48,10 @@ public class Server : MonoBehaviour
     {
         if (_isActive)
         {
+            Debug.Log("Server shutdown");
             driver.Dispose();
             _connections.Dispose();
             _isActive = false;
-            Debug.Log("Server shutdown");
         }
     }
 
@@ -91,7 +90,8 @@ public class Server : MonoBehaviour
 
         _KeepAlive();
 
-        // as NetworkDriver is part of the job system, empties up the queue of messages coming in 
+        // As NetworkDriver use the "C# Job System", make sure the Complete() method of the JobHandle is called to force a synchronization on the main thread.
+        // Here it empties up the queue of messages coming in.
         driver.ScheduleUpdate().Complete();
 
         _CleanupConnections();
@@ -122,7 +122,7 @@ public class Server : MonoBehaviour
             if (!_connections[i].IsCreated)
             {
                 _connections.RemoveAtSwapBack(i);
-                i--;
+                --i;
             }
         }
     }
@@ -150,19 +150,17 @@ public class Server : MonoBehaviour
             // poll the driver for all the messages from all the connections
             while ((cmd = driver.PopEventForConnection(_connections[i], out stream)) != NetworkEvent.Type.Empty)
             {
+                Debug.Log("[Server] PopEventForConnection() : " + _connections[i].InternalId);
                 if (cmd == NetworkEvent.Type.Data)
                 {
-                    Debug.Log("Server pop a received message of type Data from the client");
+                    Debug.Log("[Server] NetworkEvent.Type.Data received");
                     NetUtility.OnData(stream, _connections[i], this);
                 }
                 else if (cmd == NetworkEvent.Type.Disconnect)
                 {
-                    Debug.LogWarning("Client disconnected from server");
-                    // reset the connection of the player 
+                    Debug.LogWarning("[Server] NetworkEvent.Type.Disconnect received");
+
                     _connections[i] = default(NetworkConnection);
-                    // trigger non empty action
-                    connectionDropped?.Invoke();
-                    // shutdown the game on any deconnection, it's not common but it makes sense in this 2 player game
                     Shutdown();
                 }
             }

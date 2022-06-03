@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using System.Collections;
 
 public class GameUI : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class GameUI : MonoBehaviour
     [SerializeField] private GameObject _victoryLocalScreen;
     [SerializeField] private GameObject _victoryNetworkScreen;
     [SerializeField] private GameObject _waitingRematchScreen;
+    [SerializeField] private GameObject _opponentDisconnectedScreen;
     private Animator _menuAnimator;
 
     void Awake()
@@ -44,7 +46,7 @@ public class GameUI : MonoBehaviour
         client.Init(_addressInput.text, 8007);
     }
 
-    public void OnOnlineBackButton()
+    public void OnOnlineBackStartMenuButton()
     {
         _menuAnimator.SetTrigger("StartMenu");
     }
@@ -59,11 +61,19 @@ public class GameUI : MonoBehaviour
     }
 
     // VICTORY SCREEN BUTTONS
+    public void OnLocalVictoryScreenMenuButton()
+    {
+        _menusBackground.SetActive(true);
+        _victoryLocalScreen.SetActive(false);
+        _menuAnimator.SetTrigger("StartMenu");
+        EventManager.TriggerEvent("LocalEndGame");
+    }
+    
     public void OnRematchLocalButton()
     {
         _menusBackground.SetActive(false);
         _victoryLocalScreen.SetActive(false);
-        EventManager.TriggerEvent("LocalRematch");
+        EventManager.TriggerEvent("LocalEndGame");
     }
     
     public void OnRematchDemandButton()
@@ -77,6 +87,7 @@ public class GameUI : MonoBehaviour
     {
         EventManager.AddListener("LocalGameEnded", _OnLocalGameEnded);
         EventManager.AddListener("NetworkGameEnded", _OnNetworkGameEnded);
+        EventManager.AddListener("OpponentDisconnected", _OnOpponentDisconnected);
         
         NetUtility.C_START_GAME += _OnStartGameClient;
         NetUtility.C_REMATCH += _OnRematch;
@@ -94,6 +105,20 @@ public class GameUI : MonoBehaviour
     {
         _victoryNetworkScreen.SetActive(true);
         _victoryNetworkScreen.transform.Find("WinnerText").GetComponent<TMP_Text>().text = $"Player {(string)winnerName} win !";
+    }
+
+    private void _OnOpponentDisconnected()
+    {
+        StartCoroutine("_HandlesOpponentDisconnected");
+    }
+
+    private IEnumerator _HandlesOpponentDisconnected()
+    {
+        _menusBackground.SetActive(true);
+        _opponentDisconnectedScreen.SetActive(true);
+        yield return new WaitForSeconds(4);
+        _opponentDisconnectedScreen.SetActive(false);
+        _menuAnimator.SetTrigger("StartMenu");
     }
 
     // Network Events

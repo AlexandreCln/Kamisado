@@ -42,7 +42,7 @@ public class BoardManager : MonoBehaviour
     private void Awake()
     {
         _cam.transform.position = new Vector3(TILE_COUNT_X/2 - 0.5f, TILE_COUNT_Y/2 - 0.5f, -_camDistance);
-        _RegisterLocalEvents();
+        _RegisterEvents();
         _RegisterNetworkEvents();
     }
 
@@ -331,12 +331,13 @@ public class BoardManager : MonoBehaviour
     }
 
     #region Events
-    private void _RegisterLocalEvents()
+    private void _RegisterEvents()
     {
         EventManager.AddListener("TileClicked", _OnTileClicked);
         EventManager.AddListener("StartLocalGame", _OnStartLocalGame);
-        EventManager.AddListener("LocalRematch", _OnLocalRematch);
+        EventManager.AddListener("LocalEndGame", _OnLocalEndGame);
         EventManager.AddListener("DisconnectHost", _OnDisconnectHost);
+        EventManager.AddListener("OpponentDisconnected", _OnOpponentDisconnected);
     }
     private void _RegisterNetworkEvents()
     {
@@ -350,7 +351,7 @@ public class BoardManager : MonoBehaviour
         NetUtility.C_REMATCH += _OnRematch;
     }
 
-    private void _UnregisterLocalEvents()// TODO: unregister events check
+    private void _UnregisterEvents()// TODO: unregister events check
     {
         EventManager.RemoveListener("TileClicked", _OnTileClicked);
         EventManager.RemoveListener("StartLocalGame", _OnStartLocalGame);
@@ -370,8 +371,12 @@ public class BoardManager : MonoBehaviour
     private void _OnStartLocalGame()
     {
         _isLocalGame = true;
-        _SpawnAllTiles();
-        _SpawnAllPieces();
+
+        if (_tiles == null)
+        {
+            _SpawnAllTiles();
+            _SpawnAllPieces();
+        }
     }
 
     // Server
@@ -402,9 +407,9 @@ public class BoardManager : MonoBehaviour
         Server.Instance.Broadcast(mm);
     }
 
-    private void _OnLocalRematch()
+    private void _OnLocalEndGame()
     {
-        _ResetGame();
+        _ResetBoard();
     }
 
     private void _OnDisconnectHost()
@@ -414,11 +419,11 @@ public class BoardManager : MonoBehaviour
 
     private void _OnRematch(NetMessage ms)
     {
-        _ResetGame();
+        _ResetBoard();
         _readyForRematchPlayers = 0;
     }
 
-    private void _ResetGame()
+    private void _ResetBoard()
     {
         foreach (var tile in _tiles.Values)
             tile.Piece = tile.InitPiece;
@@ -441,11 +446,26 @@ public class BoardManager : MonoBehaviour
         Debug.Log($"Assigned team : {nw.AssignedTeam}");
     }
     
+    private void _OnOpponentDisconnected()
+    {
+        _ResetBoard();
+        _ToggleWhitePlayerSetup();
+        _isBlackTurn = true;
+    }
+    
     private void _OnStartGameClient(NetMessage msg)
     {
-        _SpawnAllTiles();
-        _SpawnAllPieces();
-        
+        _ToggleWhitePlayerSetup();
+
+        if (_tiles == null)
+        {
+            _SpawnAllTiles();
+            _SpawnAllPieces();
+        }
+    }
+
+    private void _ToggleWhitePlayerSetup()
+    {
         if (_teamId == 1)
         {
             _cam.Rotate(Vector3.forward * 180);

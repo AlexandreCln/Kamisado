@@ -17,7 +17,7 @@ public class Client : MonoBehaviour
     public Action connectionDropped;
     private NetworkConnection _connection;
     private bool _isActive = false;
-    private const float _keepAliveTickRate = 10f;
+    private const float _keepAliveTickRate = 20f;
     private float _lastKeepAlive;
 
     public void Init(string ip, ushort port)
@@ -40,6 +40,7 @@ public class Client : MonoBehaviour
             driver.Dispose();
             _connection = default(NetworkConnection); // not sure it is mandatory but let's be safe
             _isActive = false;
+
             Debug.Log("Client shutdown");
         }
     }
@@ -67,7 +68,6 @@ public class Client : MonoBehaviour
         if (!_connection.IsCreated && _isActive)
         {
             Debug.LogWarning("Lost connection with the server.");
-            connectionDropped?.Invoke();
             Shutdown();
         }
     }
@@ -86,9 +86,7 @@ public class Client : MonoBehaviour
 
     private void _UpdateMessagePump()
     {
-        /* Check received messages, and if we have to reply or not */
-
-        // a reader can deserialize data serialized by a writer
+        // a DataStreamReader can deserialize data that has been serialized by a DataStreamWriter
         DataStreamReader stream;
         NetworkEvent.Type cmd;
         // poll the client connection's messages
@@ -97,19 +95,19 @@ public class Client : MonoBehaviour
             if (cmd == NetworkEvent.Type.Connect)
             {
                 SendToServer(new NetWelcome());
-                Debug.Log("Success connect event : Send to server a NetWelcome to ask the AssignedTeam ID");
+                Debug.Log("[Client] NetworkEvent.Type.Connect received");
             }
             else if (cmd == NetworkEvent.Type.Data)
             {
+                Debug.Log("[Client] NetworkEvent.Type.Data received");
                 NetUtility.OnData(stream, default(NetworkConnection));
             }
             else if (cmd == NetworkEvent.Type.Disconnect)
             {
-                Debug.LogWarning("Client disconnected from server");
-                // reset the client connection 
+                Debug.Log("[Client] NetworkEvent.Type.Disconnect received");
+                
                 _connection = default(NetworkConnection);
-                // trigger non empty action
-                connectionDropped?.Invoke();
+                EventManager.TriggerEvent("OpponentDisconnected");
                 Shutdown();
             }
         }
