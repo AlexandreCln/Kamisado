@@ -372,6 +372,8 @@ public class BoardManager : MonoBehaviour
     private void _OnStartLocalGame()
     {
         _isLocalGame = true;
+        _playerCount = -1;
+        _teamId = -1;
 
         if (_tiles == null)
         {
@@ -424,7 +426,8 @@ public class BoardManager : MonoBehaviour
 
     private void _OnDisconnectHost()
     {
-        _playerCount--;
+        _playerCount = -1;
+        _teamId = -1;
     }
 
     private void _OnRematch(NetMessage ms)
@@ -450,6 +453,9 @@ public class BoardManager : MonoBehaviour
     // Client
     private void _OnWelcomeClient(NetMessage msg)
     {
+        if (_teamId != -1)
+            return;
+
         NetWelcome nw = msg as NetWelcome;
         // New connected client assign a team itself, from the message deserialized earlier
         _teamId = nw.AssignedTeam;
@@ -458,8 +464,9 @@ public class BoardManager : MonoBehaviour
     
     private void _OnOpponentDisconnected()
     {
-        _ResetBoard();
         _ToggleWhitePlayerSetup();
+        _OnDisconnectHost();
+        _ResetBoard();
         _isBlackTurn = true;
     }
     
@@ -478,9 +485,9 @@ public class BoardManager : MonoBehaviour
     private void _ToggleWhitePlayerSetup()
     {
         if (_teamId == 1)
-        {
-            _cam.Rotate(Vector3.forward * 180);
-        }
+            _cam.transform.eulerAngles = new Vector3(0,0,180);
+        else
+            _cam.transform.eulerAngles = new Vector3(0,0,0);
     }
 
     private void _OnMakeMoveClient(NetMessage msg)

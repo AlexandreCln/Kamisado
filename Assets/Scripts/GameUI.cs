@@ -25,6 +25,7 @@ public class GameUI : MonoBehaviour
     {
         _menusBackground.SetActive(false);
         _menuAnimator.SetTrigger("InGameMenu");
+
         EventManager.TriggerEvent("StartLocalGame");
     }
 
@@ -37,6 +38,7 @@ public class GameUI : MonoBehaviour
     public void OnOnlineHostButton()
     {
         _menuAnimator.SetTrigger("HostMenu");
+
         server.Init(8007);
         client.Init("127.0.0.1", 8007);
     }
@@ -54,10 +56,11 @@ public class GameUI : MonoBehaviour
     // HOST MENU BUTTONS
     public void OnHostBackButton()
     {
+        _menuAnimator.SetTrigger("OnlineMenu");
+
         server.Shutdown();
         client.Shutdown();
         EventManager.TriggerEvent("DisconnectHost");
-        _menuAnimator.SetTrigger("OnlineMenu");
     }
 
     // VICTORY LOCAL SCREEN BUTTONS
@@ -65,6 +68,7 @@ public class GameUI : MonoBehaviour
     {
         _victoryLocalScreen.SetActive(false);
         _menuAnimator.SetTrigger("StartMenu");
+        
         EventManager.TriggerEvent("LocalEndGame");
     }
     
@@ -72,6 +76,7 @@ public class GameUI : MonoBehaviour
     {
         _menusBackground.SetActive(false);
         _victoryLocalScreen.SetActive(false);
+
         EventManager.TriggerEvent("LocalEndGame");
     }
 
@@ -80,6 +85,7 @@ public class GameUI : MonoBehaviour
     {
         _waitingRematchScreen.SetActive(true);
         _victoryNetworkScreen.SetActive(false);
+
         Client.Instance.SendToServer(new NetRematchDemand());
     }
 
@@ -89,6 +95,9 @@ public class GameUI : MonoBehaviour
         _waitingRematchScreen.SetActive(false);
         _victoryNetworkScreen.SetActive(false);
         _menuAnimator.SetTrigger("StartMenu");
+
+        server.Shutdown();
+        client.Shutdown();
         EventManager.TriggerEvent("NetworkEndGame");
     }
     
@@ -102,7 +111,7 @@ public class GameUI : MonoBehaviour
         NetUtility.C_REMATCH += _OnRematch;
     }
 
-    // Local Events
+    // Events
     private void _OnLocalGameEnded(object winnerName)
     {
         _menusBackground.SetActive(true);
