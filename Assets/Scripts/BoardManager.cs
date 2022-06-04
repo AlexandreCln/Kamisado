@@ -336,6 +336,7 @@ public class BoardManager : MonoBehaviour
         EventManager.AddListener("TileClicked", _OnTileClicked);
         EventManager.AddListener("StartLocalGame", _OnStartLocalGame);
         EventManager.AddListener("LocalEndGame", _OnLocalEndGame);
+        EventManager.AddListener("NetworkEndGame", _OnNetworkEndGame);
         EventManager.AddListener("DisconnectHost", _OnDisconnectHost);
         EventManager.AddListener("OpponentDisconnected", _OnOpponentDisconnected);
     }
@@ -412,6 +413,15 @@ public class BoardManager : MonoBehaviour
         _ResetBoard();
     }
 
+    private void _OnNetworkEndGame()
+    {
+        _ResetBoard();
+        _readyForRematchPlayers = 0;
+        _playerCount = -1;
+        _teamId = -1;
+        _isBlackTurn = true;
+    }
+
     private void _OnDisconnectHost()
     {
         _playerCount--;
@@ -456,6 +466,7 @@ public class BoardManager : MonoBehaviour
     private void _OnStartGameClient(NetMessage msg)
     {
         _ToggleWhitePlayerSetup();
+        _isLocalGame = false;
 
         if (_tiles == null)
         {

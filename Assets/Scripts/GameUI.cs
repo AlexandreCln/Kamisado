@@ -60,10 +60,9 @@ public class GameUI : MonoBehaviour
         _menuAnimator.SetTrigger("OnlineMenu");
     }
 
-    // VICTORY SCREEN BUTTONS
+    // VICTORY LOCAL SCREEN BUTTONS
     public void OnLocalVictoryScreenMenuButton()
     {
-        _menusBackground.SetActive(true);
         _victoryLocalScreen.SetActive(false);
         _menuAnimator.SetTrigger("StartMenu");
         EventManager.TriggerEvent("LocalEndGame");
@@ -75,14 +74,24 @@ public class GameUI : MonoBehaviour
         _victoryLocalScreen.SetActive(false);
         EventManager.TriggerEvent("LocalEndGame");
     }
-    
+
+    // VICTORY NETWORK SCREEN BUTTONS
     public void OnRematchDemandButton()
     {
-        _victoryNetworkScreen.SetActive(false);
         _waitingRematchScreen.SetActive(true);
+        _victoryNetworkScreen.SetActive(false);
         Client.Instance.SendToServer(new NetRematchDemand());
     }
 
+    // COMMON BUTTONS
+    public void OnNetworkEndedGameMenuButton()
+    {
+        _waitingRematchScreen.SetActive(false);
+        _victoryNetworkScreen.SetActive(false);
+        _menuAnimator.SetTrigger("StartMenu");
+        EventManager.TriggerEvent("NetworkEndGame");
+    }
+    
     private void _RegisterEvents()
     {
         EventManager.AddListener("LocalGameEnded", _OnLocalGameEnded);
@@ -103,6 +112,7 @@ public class GameUI : MonoBehaviour
 
     private void _OnNetworkGameEnded(object winnerName)
     {
+        _menusBackground.SetActive(true);
         _victoryNetworkScreen.SetActive(true);
         _victoryNetworkScreen.transform.Find("WinnerText").GetComponent<TMP_Text>().text = $"Player {(string)winnerName} win !";
     }
@@ -130,6 +140,7 @@ public class GameUI : MonoBehaviour
 
     private void _OnRematch(NetMessage msg)
     {
+        _menusBackground.SetActive(false);
         _waitingRematchScreen.SetActive(false);
     }
 }
