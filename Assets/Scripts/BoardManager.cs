@@ -174,7 +174,7 @@ public class BoardManager : MonoBehaviour
     
     private void _PrepareNextMove(Tile lastTargetTile)
     {
-        SwitchTurn();
+        _SwitchTurn();
         var currentPlayerPieces = _isBlackTurn ? _blackPieces : _whitePieces;
         _activePiece = currentPlayerPieces.FirstOrDefault(x => x.Value.Color == lastTargetTile.Color).Value;
         bool canMove = _ActiveLegalTiles();
@@ -182,7 +182,7 @@ public class BoardManager : MonoBehaviour
         if (!canMove)
         {
             Debug.Log("no available moves");
-            SwitchTurn();
+            _SwitchTurn();
             currentPlayerPieces = _isBlackTurn ? _blackPieces : _whitePieces;
             _activePiece = currentPlayerPieces.FirstOrDefault(x => x.Value.Color == lastTargetTile.Color).Value;
             canMove = _ActiveLegalTiles();
@@ -192,7 +192,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    private void SwitchTurn()
+    private void _SwitchTurn()
     {
         _isBlackTurn = !_isBlackTurn;
         _blackPlayerIndicator.enabled = _isBlackTurn;
@@ -464,7 +464,7 @@ public class BoardManager : MonoBehaviour
     
     private void _OnOpponentDisconnected()
     {
-        _ToggleWhitePlayerSetup();
+        _RotateCamera();
         _OnDisconnectHost();
         _ResetBoard();
         _isBlackTurn = true;
@@ -472,7 +472,7 @@ public class BoardManager : MonoBehaviour
     
     private void _OnStartGameClient(NetMessage msg)
     {
-        _ToggleWhitePlayerSetup();
+        _RotateCamera();
         _isLocalGame = false;
 
         if (_tiles == null)
@@ -482,7 +482,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    private void _ToggleWhitePlayerSetup()
+    private void _RotateCamera()
     {
         if (_teamId == 1)
             _cam.transform.eulerAngles = new Vector3(0,0,180);
