@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Networking.Transport;
@@ -7,11 +8,13 @@ using Unity.Networking.Transport;
 public class BoardManager : MonoBehaviour
 {    
     [SerializeField] private Tile _blankTilePrefab;
-    [SerializeField] private Piece _blankPiecePrefab;
+    [SerializeField] private Piece _whitePiecePrefab;
+    [SerializeField] private Piece _blackPiecePrefab;
     [SerializeField] private Image _blackPlayerIndicator;
     [SerializeField] private Image _whitePlayerIndicator;
     [SerializeField] private Transform _cam;
-    [SerializeField] private float _camDistance = 13f;
+    [SerializeField] private float _camDistance = 8f;
+    [SerializeField] private float _pieceMovementDuration = 1f;
 
     [Header("Color Theme")]
     [SerializeField] private Color _orange;
@@ -73,17 +76,17 @@ public class BoardManager : MonoBehaviour
     {       
         _blackPieces = new Dictionary<Vector2, Piece>();
         foreach (Tile tile in _tiles.Values.Where(t => t.IsBlackHomeCell))
-            _blackPieces[tile.Pos] = _SpawnPiece(tile);
+            _blackPieces[tile.Pos] = _SpawnPiece(tile, false);
 
         _whitePieces = new Dictionary<Vector2, Piece>();
         foreach (Tile tile in _tiles.Values.Where(t => t.IsWhiteHomeCell))
             _whitePieces[tile.Pos] = _SpawnPiece(tile);
     }
 
-    private Piece _SpawnPiece(Tile spawnTile)
+    private Piece _SpawnPiece(Tile spawnTile, bool white = true)
     {
         Vector2 piecePos = new Vector2(spawnTile.Pos.x, spawnTile.Pos.y);
-        Piece spawnedPiece = Instantiate(_blankPiecePrefab, piecePos, Quaternion.identity);
+        Piece spawnedPiece = Instantiate(white ? _whitePiecePrefab : _blackPiecePrefab, piecePos, Quaternion.identity);
         spawnedPiece.Initialize(spawnTile);
         spawnedPiece.transform.SetParent(transform);
 
@@ -124,17 +127,18 @@ public class BoardManager : MonoBehaviour
             {
                 Debug.Log("send move to server");
                 NetMakeMove mm = new NetMakeMove();
-                mm.OriginX = (int)_activePiece.transform.position.x;
-                mm.OriginY = (int)_activePiece.transform.position.y;
+                mm.OriginX = (int)_activePiece.Pos.x;
+                mm.OriginY = (int)_activePiece.Pos.y;
                 mm.TargetY = (int)targetTile.Pos.y;
                 mm.TargetX = (int)targetTile.Pos.x;
                 mm.TeamId = _teamId;
                 Client.Instance.SendToServer(mm);
             }
 
-            Debug.Log($"move Piece locally from {_activePiece.transform.position.x};{_activePiece.transform.position.y} to {targetTile.Pos.x};{targetTile.Pos.y}");
+            Debug.Log($"move Piece locally from {_activePiece.Pos.x};{_activePiece.Pos.y} to {targetTile.Pos.x};{targetTile.Pos.y}");
             _isFirstTurn = false;
-            _MoveActivePiece(targetTile);
+            _GetTileAtPosition(_activePiece.Pos).Piece = null;
+            StartCoroutine(_MoveActivePiece(targetTile));
             _PrepareNextMove(targetTile);
         }   
         else if (
@@ -152,13 +156,28 @@ public class BoardManager : MonoBehaviour
         return _teamId == 0 && _isBlackTurn || _teamId == 1 && !_isBlackTurn;
     }
 
-    private void _MoveActivePiece(Tile targetTile)
+    private IEnumerator _MoveActivePiece(Tile targetTile)
     {
-        // swap Piece owners first
-        _GetTileAtPosition(_activePiece.transform.position).Piece = null;
+        // swap Piece owners first then update pos
         targetTile.Piece = _activePiece;
-        // then move the piece
-        _activePiece.transform.position = targetTile.Pos;
+        _activePiece.Pos = targetTile.Pos;
+
+        // physically move the piece
+        Piece pieceToMove = _activePiece;
+        yield return new WaitUntil(() => !pieceToMove.IsMoving);
+
+        float time = 0;
+        Vector3 startPosition = pieceToMove.transform.position;
+        pieceToMove.IsMoving = true;
+        while (time < _pieceMovementDuration)
+        {
+            float t = time / _pieceMovementDuration;
+            t = t*t*(3f-2f*t);
+            pieceToMove.transform.position = Vector3.Lerp(startPosition, targetTile.Pos, t);
+            time += Time.deltaTime;
+            yield return null;
+        }
+        pieceToMove.IsMoving = false;
 
         if (targetTile.IsBlackHomeCell || targetTile.IsWhiteHomeCell)
             _TriggerVictory();
@@ -204,7 +223,7 @@ public class BoardManager : MonoBehaviour
         _DisableAllTiles();
 
         bool canMove = false;
-        Vector2 startPos = _activePiece.transform.position;
+        Vector2 startPos = _activePiece.Pos;
 
         if (_isBlackTurn && _activePiece.IsBlack)
         {
@@ -494,8 +513,7 @@ public class BoardManager : MonoBehaviour
     {
         _isFirstTurn = false;
         NetMakeMove mm = msg as NetMakeMove;
-        Debug.Log($"Sender: {mm.TeamId} Receiver: {_teamId}");
-        Debug.Log("_isBlackTurn:"+_isBlackTurn);
+
         if (mm.TeamId == _teamId)
             return;
 
@@ -504,7 +522,8 @@ public class BoardManager : MonoBehaviour
             _activePiece = _GetTileAtPosition(new Vector2(mm.OriginX, mm.OriginY)).Piece;
 
         Tile targetTile = _GetTileAtPosition(new Vector2(mm.TargetX, mm.TargetY));
-        _MoveActivePiece(targetTile);
+        _GetTileAtPosition(_activePiece.Pos).Piece = null;
+        StartCoroutine(_MoveActivePiece(targetTile));
         _PrepareNextMove(targetTile);
     }
 

@@ -2082,7 +2082,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _img: {fileID: 617301318}
-  _speedX: 0.02
+  _speedX: 0.018
   _speedY: 0
 --- !u!1 &725279713
 GameObject:
@@ -2853,11 +2853,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _blankTilePrefab: {fileID: 8671934754693988446, guid: c84f1ab2309ac6e4c8e50749fb7f22eb, type: 3}
-  _blankPiecePrefab: {fileID: -8795005664826598696, guid: 5855802e8f075c641aa93621ef0fe49f, type: 3}
+  _whitePiecePrefab: {fileID: -8795005664826598696, guid: 5855802e8f075c641aa93621ef0fe49f, type: 3}
+  _blackPiecePrefab: {fileID: -8795005664826598696, guid: 0806aabe926b53546901f564b31bda30, type: 3}
   _blackPlayerIndicator: {fileID: 1562859005}
   _whitePlayerIndicator: {fileID: 1812476083}
   _cam: {fileID: 3705283}
-  _camDistance: 13
+  _camDistance: 8
+  _pieceMovementDuration: 5
   _orange: {r: 0.8431373, g: 0.454902, b: 0.12941177, a: 1}
   _blue: {r: 0, g: 0.42352945, b: 0.6784314, a: 1}
   _purple: {r: 0.42352945, g: 0.20784315, b: 0.53333336, a: 1}
@@ -3647,7 +3649,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _img: {fileID: 1133507087}
-  _speedX: 0.01
+  _speedX: 0.008
   _speedY: 0
 --- !u!1 &1147981825
 GameObject:
@@ -4282,7 +4284,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1311902376
 RectTransform:
   m_ObjectHideFlags: 0
