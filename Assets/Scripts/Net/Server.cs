@@ -26,7 +26,11 @@ public class Server : MonoBehaviour
     {
         NetworkEndPoint endpoint = NetworkEndPoint.AnyIpv4;
         endpoint.Port = port;
-        driver = NetworkDriver.Create();
+        var settings = new NetworkSettings();
+        settings.WithNetworkConfigParameters(
+            disconnectTimeoutMS: 5000,
+            heartbeatTimeoutMS: 500);
+        driver = NetworkDriver.Create(settings);
 
         if (driver.Bind(endpoint) != 0)
         {

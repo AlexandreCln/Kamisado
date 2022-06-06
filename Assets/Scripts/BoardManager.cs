@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,8 +9,9 @@ public class BoardManager : MonoBehaviour
     [SerializeField] private Tile _blankTilePrefab;
     [SerializeField] private Piece _whitePiecePrefab;
     [SerializeField] private Piece _blackPiecePrefab;
-    [SerializeField] private Image _blackPlayerIndicator;
-    [SerializeField] private Image _whitePlayerIndicator;
+    [SerializeField] private GameObject _blackIndicator;
+    [SerializeField] private GameObject _whiteIndicator;
+    [SerializeField] private ParticleSystem _playerIndicatorEffect;
     [SerializeField] private Transform _cam;
     [SerializeField] private float _camDistance = 8f;
     [SerializeField] private float _pieceMovementDuration = 1f;
@@ -214,8 +214,13 @@ public class BoardManager : MonoBehaviour
     private void _SwitchTurn()
     {
         _isBlackTurn = !_isBlackTurn;
-        _blackPlayerIndicator.enabled = _isBlackTurn;
-        _whitePlayerIndicator.enabled = !_isBlackTurn;
+        _ActiveTurnIndicatorEffect();
+    }
+
+    private void _ActiveTurnIndicatorEffect()
+    {
+        Vector3 effectPos = Vector3.forward * 3 + (_isBlackTurn ? _blackIndicator.transform.position : _whiteIndicator.transform.position);
+        _playerIndicatorEffect.transform.position = effectPos;
     }
 
     private bool _ActiveLegalTiles()
@@ -399,6 +404,7 @@ public class BoardManager : MonoBehaviour
             _SpawnAllTiles();
             _SpawnAllPieces();
         }
+        _RotateView();
     }
 
     // Server
@@ -441,6 +447,7 @@ public class BoardManager : MonoBehaviour
         _playerCount = -1;
         _teamId = -1;
         _isBlackTurn = true;
+        _ActiveTurnIndicatorEffect();
     }
 
     private void _OnDisconnectHost()
@@ -483,15 +490,16 @@ public class BoardManager : MonoBehaviour
     
     private void _OnOpponentDisconnected()
     {
-        _RotateCamera();
+        _RotateView();
         _OnDisconnectHost();
         _ResetBoard();
         _isBlackTurn = true;
+        _ActiveTurnIndicatorEffect();
     }
     
     private void _OnStartGameClient(NetMessage msg)
     {
-        _RotateCamera();
+        _RotateView();
         _isLocalGame = false;
 
         if (_tiles == null)
@@ -501,12 +509,22 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    private void _RotateCamera()
+    private void _RotateView()
     {
-        if (_teamId == 1)
-            _cam.transform.eulerAngles = new Vector3(0,0,180);
+        if (_isLocalGame || _teamId == 0)
+        {
+            Vector3 dir = new Vector3(0,0,0);
+            _whiteIndicator.transform.eulerAngles = dir;
+            _blackIndicator.transform.eulerAngles = dir;
+            _cam.transform.eulerAngles = dir;
+        }
         else
-            _cam.transform.eulerAngles = new Vector3(0,0,0);
+        {
+            Vector3 indicatorsDir = new Vector3(0,180,180);
+            _whiteIndicator.transform.eulerAngles = indicatorsDir;
+            _blackIndicator.transform.eulerAngles = indicatorsDir;
+            _cam.transform.eulerAngles = new Vector3(0,0,180);
+        }
     }
 
     private void _OnMakeMoveClient(NetMessage msg)
