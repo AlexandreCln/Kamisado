@@ -68,16 +68,12 @@ public class GameUI : MonoBehaviour
     {
         _victoryLocalScreen.SetActive(false);
         _menuAnimator.SetTrigger("StartMenu");
-        
-        EventManager.TriggerEvent("LocalEndGame");
     }
     
     public void OnRematchLocalButton()
     {
         _menusBackground.SetActive(false);
         _victoryLocalScreen.SetActive(false);
-
-        EventManager.TriggerEvent("LocalEndGame");
     }
 
     // VICTORY NETWORK SCREEN BUTTONS
@@ -135,6 +131,8 @@ public class GameUI : MonoBehaviour
     {
         _menusBackground.SetActive(true);
         _opponentDisconnectedScreen.SetActive(true);
+        _victoryNetworkScreen.SetActive(false);
+        _waitingRematchScreen.SetActive(false);
         yield return new WaitForSeconds(4);
         _opponentDisconnectedScreen.SetActive(false);
         _menuAnimator.SetTrigger("StartMenu");

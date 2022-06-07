@@ -15,6 +15,7 @@ public class BoardManager : MonoBehaviour
     [SerializeField] private Transform _cam;
     [SerializeField] private float _camDistance = 8f;
     [SerializeField] private float _pieceMovementDuration = 1f;
+    [SerializeField] private float _screenVictoryDelaySeconds = 2f;
 
     [Header("Color Theme")]
     [SerializeField] private Color _orange;
@@ -139,7 +140,12 @@ public class BoardManager : MonoBehaviour
             _isFirstTurn = false;
             _GetTileAtPosition(_activePiece.Pos).Piece = null;
             StartCoroutine(_MoveActivePiece(targetTile));
-            _PrepareNextMove(targetTile);
+            _SwitchTurn();
+
+            if (!targetTile.IsBlackHomeCell && !targetTile.IsWhiteHomeCell)
+                _PrepareNextMove(targetTile);
+            else
+                StartCoroutine(_TriggerVictory());
         }   
         else if (
             _isFirstTurn && targetTile.Piece != null && 
@@ -178,22 +184,21 @@ public class BoardManager : MonoBehaviour
             yield return null;
         }
         pieceToMove.IsMoving = false;
-
-        if (targetTile.IsBlackHomeCell || targetTile.IsWhiteHomeCell)
-            _TriggerVictory();
     }
 
-    private void _TriggerVictory()
+    private IEnumerator _TriggerVictory()
     {
+        _DisableAllTiles();
+        yield return new WaitForSeconds(_screenVictoryDelaySeconds);
         EventManager.TriggerEvent(
             _isLocalGame ? "LocalGameEnded" : "NetworkGameEnded", 
-            _isBlackTurn ? "black" : "white"
+            _isBlackTurn ? "white" : "black"
         );
+        _ResetBoard();
     }
     
     private void _PrepareNextMove(Tile lastTargetTile)
     {
-        _SwitchTurn();
         var currentPlayerPieces = _isBlackTurn ? _blackPieces : _whitePieces;
         _activePiece = currentPlayerPieces.FirstOrDefault(x => x.Value.Color == lastTargetTile.Color).Value;
         bool canMove = _ActiveLegalTiles();
@@ -207,17 +212,17 @@ public class BoardManager : MonoBehaviour
             canMove = _ActiveLegalTiles();
 
             if (!canMove)
-                _TriggerVictory();
+                StartCoroutine(_TriggerVictory());
         }
     }
 
     private void _SwitchTurn()
     {
         _isBlackTurn = !_isBlackTurn;
-        _ActiveTurnIndicatorEffect();
+        _SwitchTurnIndicatorEffect();
     }
 
-    private void _ActiveTurnIndicatorEffect()
+    private void _SwitchTurnIndicatorEffect()
     {
         Vector3 effectPos = Vector3.forward * 3 + (_isBlackTurn ? _blackIndicator.transform.position : _whiteIndicator.transform.position);
         _playerIndicatorEffect.transform.position = effectPos;
@@ -226,7 +231,6 @@ public class BoardManager : MonoBehaviour
     private bool _ActiveLegalTiles()
     {
         _DisableAllTiles();
-
         bool canMove = false;
         Vector2 startPos = _activePiece.Pos;
 
@@ -359,7 +363,6 @@ public class BoardManager : MonoBehaviour
     {
         EventManager.AddListener("TileClicked", _OnTileClicked);
         EventManager.AddListener("StartLocalGame", _OnStartLocalGame);
-        EventManager.AddListener("LocalEndGame", _OnLocalEndGame);
         EventManager.AddListener("NetworkEndGame", _OnNetworkEndGame);
         EventManager.AddListener("DisconnectHost", _OnDisconnectHost);
         EventManager.AddListener("OpponentDisconnected", _OnOpponentDisconnected);
@@ -374,22 +377,6 @@ public class BoardManager : MonoBehaviour
         NetUtility.C_START_GAME += _OnStartGameClient;
         NetUtility.C_MAKE_MOVE += _OnMakeMoveClient;
         NetUtility.C_REMATCH += _OnRematch;
-    }
-
-    private void _UnregisterEvents()// TODO: unregister events check
-    {
-        EventManager.RemoveListener("TileClicked", _OnTileClicked);
-        EventManager.RemoveListener("StartLocalGame", _OnStartLocalGame);
-    }
-
-    private void _UnregisterNetworkEvents()// TODO: CALL on disable ? + unregister events check
-    {
-        NetUtility.S_WELCOME -= _OnWelcomeServer;
-        NetUtility.S_MAKE_MOVE -= _OnMakeMoveServer;
-
-        NetUtility.C_WELCOME -= _OnWelcomeClient;
-        NetUtility.C_START_GAME -= _OnStartGameClient;
-        NetUtility.C_MAKE_MOVE -= _OnMakeMoveClient;
     }
 
     // Local
@@ -435,19 +422,13 @@ public class BoardManager : MonoBehaviour
         Server.Instance.Broadcast(mm);
     }
 
-    private void _OnLocalEndGame()
-    {
-        _ResetBoard();
-    }
-
     private void _OnNetworkEndGame()
     {
-        _ResetBoard();
         _readyForRematchPlayers = 0;
         _playerCount = -1;
         _teamId = -1;
         _isBlackTurn = true;
-        _ActiveTurnIndicatorEffect();
+        _SwitchTurnIndicatorEffect();
     }
 
     private void _OnDisconnectHost()
@@ -458,7 +439,6 @@ public class BoardManager : MonoBehaviour
 
     private void _OnRematch(NetMessage ms)
     {
-        _ResetBoard();
         _readyForRematchPlayers = 0;
     }
 
@@ -494,7 +474,7 @@ public class BoardManager : MonoBehaviour
         _OnDisconnectHost();
         _ResetBoard();
         _isBlackTurn = true;
-        _ActiveTurnIndicatorEffect();
+        _SwitchTurnIndicatorEffect();
     }
     
     private void _OnStartGameClient(NetMessage msg)
@@ -542,7 +522,12 @@ public class BoardManager : MonoBehaviour
         Tile targetTile = _GetTileAtPosition(new Vector2(mm.TargetX, mm.TargetY));
         _GetTileAtPosition(_activePiece.Pos).Piece = null;
         StartCoroutine(_MoveActivePiece(targetTile));
-        _PrepareNextMove(targetTile);
+        _SwitchTurn();
+        
+        if (!targetTile.IsBlackHomeCell && !targetTile.IsWhiteHomeCell)
+            _PrepareNextMove(targetTile);
+        else
+            StartCoroutine(_TriggerVictory());
     }
 
     private void _OnRematchDemand(NetMessage msg, NetworkConnection conn)
