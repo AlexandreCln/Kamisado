@@ -39,7 +39,7 @@ public class BoardManager : MonoBehaviour
     private int _readyForRematchPlayers = 0;
 
     #region Networking
-    private int _playerCount = -1;
+    private int _totalPlayerConnected = -1;
     private int _teamId = -1;
     #endregion
 
@@ -219,13 +219,15 @@ public class BoardManager : MonoBehaviour
     private void _SwitchTurn()
     {
         _isBlackTurn = !_isBlackTurn;
-        _SwitchTurnIndicatorEffect();
+        _RepositionTurnIndicatorEffect();
     }
 
-    private void _SwitchTurnIndicatorEffect()
+    private void _RepositionTurnIndicatorEffect()
     {
-        Vector3 effectPos = Vector3.forward * 3 + (_isBlackTurn ? _blackIndicator.transform.position : _whiteIndicator.transform.position);
-        _playerIndicatorEffect.transform.position = effectPos;
+        _playerIndicatorEffect.transform.position = Vector3.forward * 3 + 
+            (_isBlackTurn ? 
+                _blackIndicator.transform.position : 
+                _whiteIndicator.transform.position);
     }
 
     private bool _ActiveLegalTiles()
@@ -363,8 +365,8 @@ public class BoardManager : MonoBehaviour
     {
         EventManager.AddListener("TileClicked", _OnTileClicked);
         EventManager.AddListener("StartLocalGame", _OnStartLocalGame);
-        EventManager.AddListener("NetworkEndGame", _OnNetworkEndGame);
         EventManager.AddListener("DisconnectHost", _OnDisconnectHost);
+        EventManager.AddListener("NetworkEndGame", _OnNetworkEndGame);
         EventManager.AddListener("OpponentDisconnected", _OnOpponentDisconnected);
     }
     private void _RegisterNetworkEvents()
@@ -383,7 +385,7 @@ public class BoardManager : MonoBehaviour
     private void _OnStartLocalGame()
     {
         _isLocalGame = true;
-        _playerCount = -1;
+        _totalPlayerConnected = -1;
         _teamId = -1;
 
         if (_tiles == null)
@@ -391,7 +393,7 @@ public class BoardManager : MonoBehaviour
             _SpawnAllTiles();
             _SpawnAllPieces();
         }
-        _RotateView();
+        _RotateAndPositionGameElements();
     }
 
     // Server
@@ -403,14 +405,14 @@ public class BoardManager : MonoBehaviour
         // NetWelcome is like : Hey I'm connected and I send you a message, can you fill it with the team ID ?
 
         // fill the client's message with a team ID, based on the number of player
-        nw.AssignedTeam = ++_playerCount;
+        nw.AssignedTeam = ++_totalPlayerConnected;
         Debug.Log("Handle a NetWelcome message from a client, then send it back with AssignedTeam ID : " + nw.AssignedTeam);
 
         // return the message back to the client
         Server.Instance.SendToClient(cnn, nw);
 
         // start the game if 2 players are connected
-        if (_playerCount == 1)
+        if (_totalPlayerConnected == 1)
         {
             Server.Instance.Broadcast(new NetStartGame());
         }
@@ -425,15 +427,15 @@ public class BoardManager : MonoBehaviour
     private void _OnNetworkEndGame()
     {
         _readyForRematchPlayers = 0;
-        _playerCount = -1;
+        _totalPlayerConnected = -1;
         _teamId = -1;
         _isBlackTurn = true;
-        _SwitchTurnIndicatorEffect();
+        _RepositionTurnIndicatorEffect();
     }
 
     private void _OnDisconnectHost()
     {
-        _playerCount = -1;
+        _totalPlayerConnected = -1;
         _teamId = -1;
     }
 
@@ -470,17 +472,19 @@ public class BoardManager : MonoBehaviour
     
     private void _OnOpponentDisconnected()
     {
-        _RotateView();
+        _RotateAndPositionGameElements();
         _OnDisconnectHost();
         _ResetBoard();
         _isBlackTurn = true;
-        _SwitchTurnIndicatorEffect();
+        _RepositionTurnIndicatorEffect();
     }
     
     private void _OnStartGameClient(NetMessage msg)
     {
-        _RotateView();
         _isLocalGame = false;
+        _isBlackTurn = true;
+        _RotateAndPositionGameElements();
+        _RepositionTurnIndicatorEffect();
 
         if (_tiles == null)
         {
@@ -489,7 +493,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    private void _RotateView()
+    private void _RotateAndPositionGameElements()
     {
         if (_isLocalGame || _teamId == 0)
         {
