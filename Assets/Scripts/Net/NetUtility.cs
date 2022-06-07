@@ -6,7 +6,7 @@ public enum OperationCode
 {
     KEEP_ALIVE = 1,
     WELCOME = 2,
-    START_GAME = 3,
+    START_FIRST_GAME = 3,
     MAKE_MOVE = 4,
     REMATCH_DEMAND = 5,
     REMATCH = 6
@@ -24,7 +24,7 @@ public static class NetUtility
         {
             case OperationCode.KEEP_ALIVE: msg = new NetKeepAlive(stream); break;
             case OperationCode.WELCOME: msg = new NetWelcome(stream); break;
-            case OperationCode.START_GAME: msg = new NetStartGame(stream); break;
+            case OperationCode.START_FIRST_GAME: msg = new NetStartFirstGame(stream); break;
             case OperationCode.MAKE_MOVE: msg = new NetMakeMove(stream); break;
             case OperationCode.REMATCH_DEMAND: msg = new NetRematchDemand(stream); break;
             case OperationCode.REMATCH: msg = new NetRematch(stream); break;
@@ -42,14 +42,14 @@ public static class NetUtility
     // Client Net Messages
     public static Action<NetMessage> C_KEEP_ALIVE;
     public static Action<NetMessage> C_WELCOME;
-    public static Action<NetMessage> C_START_GAME;
+    public static Action<NetMessage> C_START_FIRST_GAME;
     public static Action<NetMessage> C_MAKE_MOVE;
     public static Action<NetMessage> C_REMATCH;
     
     // Server Net Messages
     public static Action<NetMessage, NetworkConnection> S_KEEP_ALIVE;
     public static Action<NetMessage, NetworkConnection> S_WELCOME;
-    public static Action<NetMessage, NetworkConnection> S_START_GAME;
+    public static Action<NetMessage, NetworkConnection> S_START_FIRST_GAME;
     public static Action<NetMessage, NetworkConnection> S_MAKE_MOVE;
     public static Action<NetMessage, NetworkConnection> S_REMATCH_DEMAND;
 }

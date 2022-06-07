@@ -103,7 +103,7 @@ public class GameUI : MonoBehaviour
         EventManager.AddListener("NetworkGameEnded", _OnNetworkGameEnded);
         EventManager.AddListener("OpponentDisconnected", _OnOpponentDisconnected);
         
-        NetUtility.C_START_GAME += _OnStartGameClient;
+        NetUtility.C_START_FIRST_GAME += _OnStartGameClient;
         NetUtility.C_REMATCH += _OnRematch;
     }
 

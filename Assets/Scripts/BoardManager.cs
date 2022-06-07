@@ -376,7 +376,7 @@ public class BoardManager : MonoBehaviour
         NetUtility.S_REMATCH_DEMAND += _OnRematchDemand;
 
         NetUtility.C_WELCOME += _OnWelcomeClient;
-        NetUtility.C_START_GAME += _OnStartGameClient;
+        NetUtility.C_START_FIRST_GAME += _OnStartGameClient;
         NetUtility.C_MAKE_MOVE += _OnMakeMoveClient;
         NetUtility.C_REMATCH += _OnRematch;
     }
@@ -414,7 +414,7 @@ public class BoardManager : MonoBehaviour
         // start the game if 2 players are connected
         if (_totalPlayerConnected == 1)
         {
-            Server.Instance.Broadcast(new NetStartGame());
+            Server.Instance.Broadcast(new NetStartFirstGame());
         }
     }
 
