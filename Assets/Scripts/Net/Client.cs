@@ -22,7 +22,11 @@ public class Client : MonoBehaviour
 
     public void Init(string ip, ushort port)
     {
-        driver = NetworkDriver.Create();
+        var settings = new NetworkSettings();
+        settings.WithNetworkConfigParameters(
+            disconnectTimeoutMS: 5000,
+            heartbeatTimeoutMS: 500);
+        driver = NetworkDriver.Create(settings);
         NetworkEndPoint endpoint = NetworkEndPoint.Parse(ip, port);
         _connection = driver.Connect(endpoint);
         Debug.Log("Client attempting to connect to Server on " + endpoint.Address);
